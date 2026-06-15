@@ -1,0 +1,156 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with roles and permissions",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "auditor", "user"] },
+        "teams": { "type": "array", "items": { "type": "string" } },
+        "departments": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Policy": {
+      "title": "Policy",
+      "description": "Cybersecurity policy",
+      "type": "object",
+      "properties": {
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "descriptionAr": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "framework": { "type": "string", "enum": ["NCA", "ISO27001", "Other"] }
+      },
+      "required": ["nameAr", "nameEn"]
+    },
+    "Standard": {
+      "title": "Standard",
+      "description": "Security standard within a policy",
+      "type": "object",
+      "properties": {
+        "policyId": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "descriptionAr": { "type": "string" },
+        "descriptionEn": { "type": "string" }
+      },
+      "required": ["policyId", "nameAr", "nameEn"]
+    },
+    "Procedure": {
+      "title": "Procedure",
+      "description": "Specific security control or procedure",
+      "type": "object",
+      "properties": {
+        "standardId": { "type": "string" },
+        "policyId": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "descriptionAr": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "status": { "type": "string", "enum": ["not_started", "in_progress", "completed"] },
+        "importance": { "type": "string", "enum": ["high", "medium", "low"] },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "assignedTo": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["standardId", "policyId", "nameAr", "nameEn", "status"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Record of system changes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ChangeRequest": {
+      "title": "Change Request",
+      "description": "Approval request for cybersecurity changes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["tool_change", "firewall_open", "access_request", "other"] },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "receiverName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "clarification_needed"] },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "history": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "action": { "type": "string" },
+              "note": { "type": "string" },
+              "userId": { "type": "string" },
+              "userName": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "attachments": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "senderId", "receiverId", "status"]
+    },
+    "LookupOption": {
+      "title": "Lookup Option",
+      "description": "Customizable options for dropdown menus",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string", "description": "e.g., 'change_request_type', 'incident_type', 'procedure_status'" },
+        "value": { "type": "string" },
+        "labelAr": { "type": "string" },
+        "labelEn": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "descriptionAr": { "type": "string" },
+        "descriptionEn": { "type": "string" }
+      },
+      "required": ["id", "category", "value", "labelAr", "labelEn", "isActive"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/policies/{policyId}": {
+      "schema": "Policy",
+      "description": "Security policies"
+    },
+    "/standards/{standardId}": {
+      "schema": "Standard",
+      "description": "Security standards"
+    },
+    "/procedures/{procedureId}": {
+      "schema": "Procedure",
+      "description": "Security procedures"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System audit logs"
+    },
+    "/changeRequests/{requestId}": {
+      "schema": "ChangeRequest",
+      "description": "Cybersecurity change management requests"
+    },
+    "/lookupOptions/{optionId}": {
+      "schema": "LookupOption",
+      "description": "Custom lookup table options for dynamic dropdowns"
+    }
+  }
+}
