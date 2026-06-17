@@ -1,0 +1,6 @@
+@DER3.Api_HostAddress = http://localhost:5138
+
+GET {{DER3.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
