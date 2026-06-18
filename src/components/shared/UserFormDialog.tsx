@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { usersApi } from '@/services/usersApi';
+import { teamsApi } from '@/services/teamsApi';
+import { departmentsApi } from '@/services/departmentsApi';
 import { User, Role, Team, Department, PermissionGroup } from '@/types';
 import { PERMISSION_SERVICES, permKey } from '@/permissions';
 import { cn } from '@/lib/utils';
@@ -25,6 +28,7 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
   const [availableDepts, setAvailableDepts] = useState<Department[]>([]);
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
   const [showOverrides, setShowOverrides] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({
     role: 'user',
@@ -34,17 +38,36 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    setAvailableTeams(mockService.getTeams());
-    setAvailableDepts(mockService.getDepartments());
+    let active = true;
     setPermissionGroups(mockService.getPermissionGroups());
-    if (userId) {
-      const u = mockService.getUsers().find(x => x.uid === userId);
-      if (u) setFormData(u);
-    } else {
-      setFormData({ role: 'user', groupId: 'user', teams: [], departments: [] });
-    }
     setShowOverrides(false);
-  }, [open, userId]);
+
+    const load = async () => {
+      try {
+        const [teams, departments, users] = await Promise.all([
+          teamsApi.getTeams(),
+          departmentsApi.getDepartments(),
+          userId ? usersApi.getUsers() : Promise.resolve([]),
+        ]);
+        if (!active) return;
+        setAvailableTeams(teams);
+        setAvailableDepts(departments);
+        if (userId) {
+          const u = users.find(x => x.uid === userId);
+          if (u) setFormData(u);
+        } else {
+          setFormData({ role: 'user', groupId: 'user', teams: [], departments: [] });
+        }
+      } catch (error) {
+        if (active) {
+          toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل بيانات المستخدم' : 'Failed to load user data'));
+        }
+      }
+    };
+
+    void load();
+    return () => { active = false; };
+  }, [open, userId, isRtl]);
 
   const handlePhotoUpload = async (file: File | undefined) => {
     if (!file) return;
@@ -71,7 +94,7 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.email || !formData.displayName) {
       toast.error(t('fill_required_fields'));
       return;
@@ -90,10 +113,21 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
       bypassOtp: !!formData.bypassOtp,
       receiveSecurityIncidents: !!formData.receiveSecurityIncidents,
     };
-    mockService.saveUser(user);
-    toast.success(userId ? (t('user_updated_success') || 'User updated successfully') : (t('user_added_success') || 'User added successfully'));
-    onSaved();
-    onClose();
+    setSavingUser(true);
+    try {
+      if (userId) {
+        await usersApi.updateUser(userId, user);
+      } else {
+        await usersApi.createUser(user);
+      }
+      toast.success(userId ? (t('user_updated_success') || 'User updated successfully') : (t('user_added_success') || 'User added successfully'));
+      onSaved();
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ المستخدم' : 'Failed to save user'));
+    } finally {
+      setSavingUser(false);
+    }
   };
 
   return (
@@ -353,13 +387,13 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
-          <Button variant="outline" onClick={onClose} className="rounded-lg h-10 px-5 font-bold">
+          <Button variant="outline" onClick={onClose} disabled={savingUser} className="rounded-lg h-10 px-5 font-bold">
             <X className="w-4 h-4 mr-1" />
             {t('cancel')}
           </Button>
-          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-white rounded-lg h-10 px-6 font-bold">
+          <Button onClick={handleSave} disabled={savingUser} className="bg-primary hover:bg-primary/90 text-white rounded-lg h-10 px-6 font-bold">
             <Save className="w-4 h-4 mr-1" />
-            {t('save')}
+            {savingUser ? (t('loading') || 'Loading...') : t('save')}
           </Button>
         </div>
       </DialogContent>

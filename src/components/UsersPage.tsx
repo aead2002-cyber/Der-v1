@@ -6,9 +6,7 @@ import {
   UserPlus,
   Search,
   Mail,
-  Shield,
   Building2,
-  MoreVertical,
   Edit2,
   Trash2,
   AlertCircle,
@@ -26,7 +24,8 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { mockService, resolveAttachmentUrl } from '@/services/mockService';
+import { resolveAttachmentUrl } from '@/services/mockService';
+import { usersApi } from '@/services/usersApi';
 import { User } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -51,11 +50,24 @@ export default function UsersPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const isRtl = i18n.language === 'ar';
 
+  const refreshUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      setUsers(await usersApi.getUsers());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل المستخدمين' : 'Failed to load users'));
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   useEffect(() => {
-    setUsers(mockService.getUsers());
+    void refreshUsers();
   }, []);
 
   const handleDelete = (id: string) => {
@@ -63,12 +75,20 @@ export default function UsersPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deleteUser(idToDelete);
-      setUsers(mockService.getUsers());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
+      setDeletingUser(true);
+      try {
+        await usersApi.deleteUser(idToDelete);
+        await refreshUsers();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('user_deleted_success') || (isRtl ? 'تم حذف المستخدم بنجاح' : 'User deleted successfully'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حذف المستخدم' : 'Failed to delete user'));
+      } finally {
+        setDeletingUser(false);
+      }
     }
   };
 
@@ -86,7 +106,7 @@ export default function UsersPage() {
     setConfirmPassword('');
   };
 
-  const handleSavePassword = () => {
+  const handleSavePassword = async () => {
     if (!passwordTarget) return;
     if (!isPasswordValid(newPassword)) {
       toast.error(t('password_min_length'));
@@ -97,13 +117,14 @@ export default function UsersPage() {
       return;
     }
     setSavingPassword(true);
-    const result = mockService.setUserPassword(passwordTarget.uid, newPassword);
-    setSavingPassword(false);
-    if (result.success) {
+    try {
+      await usersApi.setPassword(passwordTarget.uid, newPassword);
       toast.success(t('password_changed_success'));
       closePasswordDialog();
-    } else {
-      toast.error(result.error === 'min_length' ? t('password_min_length') : t('error_updating_profile'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('error_updating_profile'));
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -166,7 +187,13 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length > 0 ? (
+              {loadingUsers ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-text-muted font-medium">
+                    {t('loading') || (isRtl ? 'جاري التحميل...' : 'Loading...')}
+                  </td>
+                </tr>
+              ) : filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => (
                   <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
                     <td>
@@ -343,11 +370,11 @@ export default function UsersPage() {
             </p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setIsDeleteConfirmOpen(false)} className="font-bold">
+            <Button variant="ghost" onClick={() => setIsDeleteConfirmOpen(false)} className="font-bold" disabled={deletingUser}>
               {t('cancel')}
             </Button>
-            <Button onClick={handleConfirmDelete} className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-6">
-              {t('delete')}
+            <Button onClick={handleConfirmDelete} disabled={deletingUser} className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-6">
+              {deletingUser ? (t('loading') || 'Loading...') : t('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -356,7 +383,7 @@ export default function UsersPage() {
       <UserFormDialog
         open={userDialogOpen}
         userId={editingUserId}
-        onSaved={() => setUsers(mockService.getUsers())}
+        onSaved={() => void refreshUsers()}
         onClose={() => setUserDialogOpen(false)}
       />
     </>

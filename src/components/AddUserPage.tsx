@@ -26,6 +26,9 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { usersApi } from '@/services/usersApi';
+import { teamsApi } from '@/services/teamsApi';
+import { departmentsApi } from '@/services/departmentsApi';
 import { User, Role, Team, Department } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -40,6 +43,7 @@ export default function AddUserPage() {
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [availableDepts, setAvailableDepts] = useState<Department[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
 
   const handlePhotoUpload = async (file: File | undefined) => {
     if (!file) return;
@@ -64,16 +68,34 @@ export default function AddUserPage() {
   });
 
   useEffect(() => {
-    setAvailableTeams(mockService.getTeams());
-    setAvailableDepts(mockService.getDepartments());
+    let active = true;
 
-    if (id) {
-      const user = mockService.getUsers().find(u => u.uid === id);
-      if (user) {
-        setFormData(user);
+    const load = async () => {
+      try {
+        const [teams, departments, users] = await Promise.all([
+          teamsApi.getTeams(),
+          departmentsApi.getDepartments(),
+          id ? usersApi.getUsers() : Promise.resolve([]),
+        ]);
+        if (!active) return;
+        setAvailableTeams(teams);
+        setAvailableDepts(departments);
+        if (id) {
+          const user = users.find(u => u.uid === id);
+          if (user) {
+            setFormData(user);
+          }
+        }
+      } catch (error) {
+        if (active) {
+          toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل بيانات المستخدم' : 'Failed to load user data'));
+        }
       }
-    }
-  }, [id]);
+    };
+
+    void load();
+    return () => { active = false; };
+  }, [id, isRtl]);
 
   const toggleSelection = (id: string, type: 'teams' | 'departments') => {
     const current = formData[type] || [];
@@ -84,7 +106,7 @@ export default function AddUserPage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.email || !formData.displayName) {
       toast.error(t('fill_required_fields'));
       return;
@@ -96,6 +118,8 @@ export default function AddUserPage() {
       displayName: formData.displayName || '',
       displayNameEn: (formData as any).displayNameEn || '',
       role: formData.role || 'user',
+      groupId: formData.groupId,
+      permissionOverrides: formData.permissionOverrides,
       teams: formData.teams || [],
       departments: formData.departments || [],
       photoURL: formData.photoURL,
@@ -103,9 +127,20 @@ export default function AddUserPage() {
       receiveSecurityIncidents: formData.receiveSecurityIncidents
     };
 
-    mockService.saveUser(user);
-    toast.success(id ? t('user_updated_success') || 'User updated successfully' : t('user_added_success') || 'User added successfully');
-    navigate('/users');
+    setSavingUser(true);
+    try {
+      if (id) {
+        await usersApi.updateUser(id, user);
+      } else {
+        await usersApi.createUser(user);
+      }
+      toast.success(id ? t('user_updated_success') || 'User updated successfully' : t('user_added_success') || 'User added successfully');
+      navigate('/users');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ المستخدم' : 'Failed to save user'));
+    } finally {
+      setSavingUser(false);
+    }
   };
 
   return (
@@ -134,9 +169,9 @@ export default function AddUserPage() {
           <Button variant="ghost" onClick={() => navigate('/users')} className="font-bold">
             {t('cancel')}
           </Button>
-          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-white font-bold px-8 h-11 rounded-lg shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5">
+          <Button onClick={handleSave} disabled={savingUser} className="bg-primary hover:bg-primary/90 text-white font-bold px-8 h-11 rounded-lg shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5">
             <Save className="w-4 h-4 mr-2" />
-            {t('save')}
+            {savingUser ? (t('loading') || 'Loading...') : t('save')}
           </Button>
         </div>
       </div>

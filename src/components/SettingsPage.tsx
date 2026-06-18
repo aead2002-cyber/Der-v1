@@ -29,6 +29,9 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { mockService, uploadFile, resolveAttachmentUrl, apiUrl } from '@/services/mockService';
+import { departmentsApi } from '@/services/departmentsApi';
+import { teamsApi } from '@/services/teamsApi';
+import { lookupOptionsApi } from '@/services/lookupOptionsApi';
 import { Team, Department, NotificationSettings, EmailSettings, NotificationTemplate, ComplianceSettings, LookupOption } from '@/types';
 import { PermissionGroupsManager } from './PermissionGroupsManager';
 import { toast } from 'sonner';
@@ -105,8 +108,9 @@ export default function SettingsPage() {
   const [activeLookupCategory, setActiveLookupCategory] = useState<string>('change_request_type');
 
   useEffect(() => {
-    setDepartments(mockService.getDepartments());
-    setTeams(mockService.getTeams());
+    refreshDepartments();
+    refreshTeams();
+    refreshLookupOptions();
     setNotifSettings(mockService.getNotificationSettings());
     const stored: any = { ...mockService.getEmailSettings() };
     delete stored.smtpUser;
@@ -114,8 +118,31 @@ export default function SettingsPage() {
     setEmailSettings(stored);
     setTemplates(mockService.getNotificationTemplates());
     setComplianceSettings(mockService.getComplianceSettings());
-    setLookupOptions(mockService.getLookupOptions());
   }, []);
+
+  const refreshDepartments = async () => {
+    try {
+      setDepartments(await departmentsApi.getDepartments());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل الإدارات' : 'Failed to load departments'));
+    }
+  };
+
+  const refreshTeams = async () => {
+    try {
+      setTeams(await teamsApi.getTeams());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل الفرق' : 'Failed to load teams'));
+    }
+  };
+
+  const refreshLookupOptions = async () => {
+    try {
+      setLookupOptions(await lookupOptionsApi.getLookupOptions());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل قوائم الاختيارات' : 'Failed to load lookup options'));
+    }
+  };
 
   const handleSaveEmailSettings = () => {
     mockService.saveEmailSettings(emailSettings);
@@ -188,7 +215,7 @@ export default function SettingsPage() {
     toast.success(t('notification_settings_saved') || 'Notification settings saved successfully');
   };
 
-  const handleSaveDepartment = () => {
+  const handleSaveDepartment = async () => {
     if (!editingDept?.nameAr || !editingDept?.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -204,14 +231,22 @@ export default function SettingsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveDepartment(dept);
-    setDepartments(mockService.getDepartments());
-    setIsDeptDialogOpen(false);
-    setEditingDept(null);
-    toast.success(t('department_saved_success') || 'Department saved successfully');
+    try {
+      if (editingDept.id) {
+        await departmentsApi.updateDepartment(editingDept.id, dept);
+      } else {
+        await departmentsApi.createDepartment(dept);
+      }
+      await refreshDepartments();
+      setIsDeptDialogOpen(false);
+      setEditingDept(null);
+      toast.success(t('department_saved_success') || 'Department saved successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ الإدارة' : 'Failed to save department'));
+    }
   };
 
-  const handleSaveTeam = () => {
+  const handleSaveTeam = async () => {
     if (!editingTeam?.nameAr || !editingTeam?.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -227,11 +262,19 @@ export default function SettingsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveTeam(team);
-    setTeams(mockService.getTeams());
-    setIsTeamDialogOpen(false);
-    setEditingTeam(null);
-    toast.success(t('team_saved_success') || 'Team saved successfully');
+    try {
+      if (editingTeam.id) {
+        await teamsApi.updateTeam(editingTeam.id, team);
+      } else {
+        await teamsApi.createTeam(team);
+      }
+      await refreshTeams();
+      setIsTeamDialogOpen(false);
+      setEditingTeam(null);
+      toast.success(t('team_saved_success') || 'Team saved successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ الفريق' : 'Failed to save team'));
+    }
   };
 
   const handleDeleteDept = (id: string) => {
@@ -246,24 +289,28 @@ export default function SettingsPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete && deleteType) {
-      if (deleteType === 'dept') {
-        mockService.deleteDepartment(idToDelete);
-        setDepartments(mockService.getDepartments());
-        toast.success(t('department_deleted_success') || 'Department deleted successfully');
-      } else {
-        mockService.deleteTeam(idToDelete);
-        setTeams(mockService.getTeams());
-        toast.success(t('team_deleted_success') || 'Team deleted successfully');
+      try {
+        if (deleteType === 'dept') {
+          await departmentsApi.deleteDepartment(idToDelete);
+          await refreshDepartments();
+          toast.success(t('department_deleted_success') || 'Department deleted successfully');
+        } else {
+          await teamsApi.deleteTeam(idToDelete);
+          await refreshTeams();
+          toast.success(t('team_deleted_success') || 'Team deleted successfully');
+        }
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        setDeleteType(null);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر الحذف' : 'Delete failed'));
       }
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      setDeleteType(null);
     }
   };
 
-  const handleSaveLookupOption = () => {
+  const handleSaveLookupOption = async () => {
     if (!editingLookup?.category || !editingLookup?.value || !editingLookup?.labelAr || !editingLookup?.labelEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -280,16 +327,30 @@ export default function SettingsPage() {
       descriptionEn: editingLookup.descriptionEn
     };
 
-    mockService.saveLookupOption(option);
-    setLookupOptions(mockService.getLookupOptions());
+    try {
+      if (editingLookup.id) {
+        await lookupOptionsApi.updateLookupOption(editingLookup.id, option);
+      } else {
+        await lookupOptionsApi.createLookupOption(option);
+      }
+      await refreshLookupOptions();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ الخيار' : 'Failed to save option'));
+      return;
+    }
     setIsLookupDialogOpen(false);
     setEditingLookup(null);
     toast.success(isRtl ? 'تم حفظ الخيار بنجاح' : 'Option saved successfully');
   };
 
-  const handleDeleteLookupOption = (id: string) => {
-    mockService.deleteLookupOption(id);
-    setLookupOptions(mockService.getLookupOptions());
+  const handleDeleteLookupOption = async (id: string) => {
+    try {
+      await lookupOptionsApi.deleteLookupOption(id);
+      await refreshLookupOptions();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حذف الخيار' : 'Failed to delete option'));
+      return;
+    }
     toast.success(isRtl ? 'تم حذف الخيار' : 'Option deleted');
   };
 
