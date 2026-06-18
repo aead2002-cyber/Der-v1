@@ -59,7 +59,13 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
-import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { mockService } from '@/services/mockService';
+import { filesApi, resolveFileUrl } from '@/services/filesApi';
+import { incidentFeedbackApi } from '@/services/incidentFeedbackApi';
+import { incidentNotesApi } from '@/services/incidentNotesApi';
+import { incidentsApi } from '@/services/incidentsApi';
+import { lookupOptionsApi } from '@/services/lookupOptionsApi';
+import { usersApi } from '@/services/usersApi';
 import { SecurityIncident, User, IncidentFeedback, IncidentNote, LookupOption } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -104,18 +110,42 @@ const IncidentsPage: React.FC = () => {
   const [isNewUploading, setIsNewUploading] = useState(false);
 
   useEffect(() => {
-    setIncidents(mockService.getIncidents());
-    setUsers(mockService.getUsers());
-    setFeedbackList(mockService.getIncidentFeedback());
-    setLookupOptions(mockService.getLookupOptions());
+    void loadData();
   }, []);
 
-  const refreshData = () => {
-    setIncidents(mockService.getIncidents());
-    setFeedbackList(mockService.getIncidentFeedback());
+  const loadData = async () => {
+    try {
+      const [incidentsData, usersData, feedbackData, lookupOptionsData] = await Promise.all([
+        incidentsApi.getIncidents(),
+        usersApi.getUsers(),
+        incidentFeedbackApi.getIncidentFeedback(),
+        lookupOptionsApi.getLookupOptions(),
+      ]);
+      setIncidents(incidentsData);
+      setUsers(usersData);
+      setFeedbackList(feedbackData);
+      setLookupOptions(lookupOptionsData);
+    } catch (error) {
+      console.error('Failed to load incidents data', error);
+      toast.error(t('failed_to_load_data') || 'Failed to load data');
+    }
   };
 
-  const handleAssign = () => {
+  const refreshData = async () => {
+    try {
+      const [incidentsData, feedbackData] = await Promise.all([
+        incidentsApi.getIncidents(),
+        incidentFeedbackApi.getIncidentFeedback(),
+      ]);
+      setIncidents(incidentsData);
+      setFeedbackList(feedbackData);
+    } catch (error) {
+      console.error('Failed to refresh incidents data', error);
+      toast.error(t('failed_to_load_data') || 'Failed to load data');
+    }
+  };
+
+  const handleAssign = async () => {
     if (!selectedIncident || !assignUserId) return;
     
     const updated: SecurityIncident = {
@@ -125,7 +155,7 @@ const IncidentsPage: React.FC = () => {
       updatedAt: new Date().toISOString()
     };
     
-    mockService.saveIncident(updated);
+    await incidentsApi.updateIncident(updated.id, updated);
     
     // Add Notification if enabled
     const settings = mockService.getNotificationSettings();
@@ -143,10 +173,10 @@ const IncidentsPage: React.FC = () => {
 
     toast.success(isRtl ? 'تم إسناد البلاغ بنجاح' : 'Incident assigned successfully');
     setIsAssignOpen(false);
-    refreshData();
+    await refreshData();
   };
 
-  const handleCreateIncident = () => {
+  const handleCreateIncident = async () => {
     if (!newTitle || !newDescription) {
       toast.error(isRtl ? 'يرجى إكمال البيانات الأساسية' : 'Please complete basic fields');
       return;
@@ -166,7 +196,7 @@ const IncidentsPage: React.FC = () => {
       attachments: newAttachments
     };
 
-    mockService.saveIncident(newInc);
+    await incidentsApi.createIncident(newInc);
     
     // Add an initial note if it was assigned
     if (newAssignee) {
@@ -182,7 +212,7 @@ const IncidentsPage: React.FC = () => {
         createdAt: new Date().toISOString(),
         attachments: []
       };
-      mockService.saveIncidentNote(note);
+      await incidentNotesApi.createIncidentNote(note);
 
       // Add Notification if enabled
       const settings = mockService.getNotificationSettings();
@@ -210,29 +240,29 @@ const IncidentsPage: React.FC = () => {
     setNewAssignee('');
     setNewAttachments([]);
     
-    refreshData();
+    await refreshData();
   };
 
-  const handleViewHistory = (incident: SecurityIncident) => {
+  const handleViewHistory = async (incident: SecurityIncident) => {
     setSelectedIncident(incident);
-    const notes = mockService.getIncidentNotes(incident.id);
-    setIncidentNotes(notes);
+    const notes = await incidentNotesApi.getIncidentNotes();
+    setIncidentNotes(notes.filter(note => note.incidentId === incident.id));
     setIsHistoryOpen(true);
   };
 
-  const handleViewAttachment = (value: string) => {
-    const url = resolveAttachmentUrl(value);
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
+  const handleViewAttachment = async (value: string) => {
+    try {
+      await filesApi.openFile(value);
+    } catch (error) {
+      console.error('Failed to open incident attachment', error);
+      setPreviewFile(value);
+      setIsPreviewOpen(true);
     }
-    setPreviewFile(value);
-    setIsPreviewOpen(true);
   };
 
   const attachmentLabel = (value: string) => {
     if (!value) return '';
-    if (value.startsWith('/uploads/') || /^https?:\/\//i.test(value)) {
+    if (value.startsWith('/uploads/') || value.startsWith('/api/files/') || /^https?:\/\//i.test(value)) {
       const parts = value.split('/');
       return parts[parts.length - 1].replace(/^\d+-[a-f0-9]+-/, '');
     }
@@ -734,7 +764,7 @@ const IncidentsPage: React.FC = () => {
                     {users.map(u => (
                       <SelectItem key={u.uid} value={u.uid}>
                         <div className="flex items-center gap-2 py-1">
-                          <img src={resolveAttachmentUrl(u.photoURL || '') || u.photoURL} alt="" className="w-5 h-5 rounded-full" />
+                          <img src={resolveFileUrl(u.photoURL || '') || u.photoURL} alt="" className="w-5 h-5 rounded-full" />
                           <span>{u.displayName}</span>
                         </div>
                       </SelectItem>
@@ -1035,7 +1065,10 @@ const IncidentsPage: React.FC = () => {
                        const file = e.target.files?.[0];
                        if (!file) return;
                        setIsNewUploading(true);
-                       const uploaded = await uploadFile(file);
+                       const uploaded = await filesApi.uploadFile(file).catch((error: any) => {
+                         console.error('Failed to upload incident attachment', error);
+                         return null;
+                       });
                        setIsNewUploading(false);
                        e.target.value = '';
                        if (!uploaded) { toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed'); return; }

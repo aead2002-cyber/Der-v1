@@ -39,7 +39,10 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { mockService } from '@/services/mockService';
+import { commitmentsApi } from '@/services/commitmentsApi';
+import { filesApi } from '@/services/filesApi';
+import { usersApi } from '@/services/usersApi';
 import { Commitment, User } from '@/types';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -66,9 +69,22 @@ export default function CommitmentsPage() {
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
-    setCommitments(mockService.getCommitments());
-    setUsers(mockService.getUsers());
+    void refresh();
   }, []);
+
+  const refresh = async () => {
+    try {
+      const [commitmentsData, usersData] = await Promise.all([
+        commitmentsApi.getCommitments(),
+        usersApi.getUsers(),
+      ]);
+      setCommitments(commitmentsData);
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Failed to load commitments data', error);
+      toast.error(t('failed_to_load_data') || 'Failed to load data');
+    }
+  };
 
   const getStatusBadge = (commitment: Commitment) => {
     if (commitment.status === 'completed') {
@@ -108,7 +124,7 @@ export default function CommitmentsPage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingCommitment?.nameAr || !editingCommitment?.nameEn || !editingCommitment?.expiryDate || !editingCommitment?.responsibleUser) {
       toast.error(t('fill_required_fields'));
       return;
@@ -127,7 +143,12 @@ export default function CommitmentsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveCommitment(commitment);
+    try {
+      if (editingCommitment.id) {
+        await commitmentsApi.updateCommitment(editingCommitment.id, commitment);
+      } else {
+        await commitmentsApi.createCommitment(commitment);
+      }
 
     // Add Notification if enabled
     if (commitment.responsibleUser) {
@@ -145,10 +166,14 @@ export default function CommitmentsPage() {
       }
     }
 
-    setCommitments(mockService.getCommitments());
-    setIsDialogOpen(false);
-    setEditingCommitment(null);
-    toast.success(t('commitment_saved_success') || 'Commitment saved successfully');
+      await refresh();
+      setIsDialogOpen(false);
+      setEditingCommitment(null);
+      toast.success(t('commitment_saved_success') || 'Commitment saved successfully');
+    } catch (error) {
+      console.error('Failed to save commitment', error);
+      toast.error(t('commitment_save_failed') || 'Commitment could not be saved');
+    }
   };
 
   const handleComplete = (commitment: Commitment) => {
@@ -158,7 +183,7 @@ export default function CommitmentsPage() {
     setIsCommCompleteDialogOpen(true);
   };
 
-  const confirmCommitmentCompletion = () => {
+  const confirmCommitmentCompletion = async () => {
     if (!selectedCommForComplete) return;
     if (!commEvidenceLink) {
       toast.error(isRtl ? 'يجب إرفاق ملف لإثبات الإنجاز' : 'You must attach a file to prove completion');
@@ -174,32 +199,42 @@ export default function CommitmentsPage() {
       updatedAt: new Date().toISOString()
     };
 
-    mockService.saveCommitment(updated);
-    setCommitments(mockService.getCommitments());
-    setIsCommCompleteDialogOpen(false);
-    setSelectedCommForComplete(null);
-    toast.success(t('commitment_completed_success') || 'Commitment completed successfully');
-  };
-
-  const handleViewAttachment = (value: string) => {
-    const url = resolveAttachmentUrl(value);
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
+    try {
+      await commitmentsApi.updateCommitment(updated.id, updated);
+      await refresh();
+      setIsCommCompleteDialogOpen(false);
+      setSelectedCommForComplete(null);
+      toast.success(t('commitment_completed_success') || 'Commitment completed successfully');
+    } catch (error) {
+      console.error('Failed to complete commitment', error);
+      toast.error(t('commitment_complete_failed') || 'Commitment could not be completed');
     }
-    setPreviewFile(value);
-    setIsPreviewOpen(true);
   };
 
-  const handleReactivate = (commitment: Commitment) => {
+  const handleViewAttachment = async (value: string) => {
+    try {
+      await filesApi.openFile(value);
+    } catch (error) {
+      console.error('Failed to open commitment evidence', error);
+      setPreviewFile(value);
+      setIsPreviewOpen(true);
+    }
+  };
+
+  const handleReactivate = async (commitment: Commitment) => {
     const updated: Commitment = {
       ...commitment,
       status: 'active',
       updatedAt: new Date().toISOString()
     };
-    mockService.saveCommitment(updated);
-    setCommitments(mockService.getCommitments());
-    toast.success(t('commitment_reactivated_success') || 'Commitment reactivated successfully');
+    try {
+      await commitmentsApi.updateCommitment(updated.id, updated);
+      await refresh();
+      toast.success(t('commitment_reactivated_success') || 'Commitment reactivated successfully');
+    } catch (error) {
+      console.error('Failed to reactivate commitment', error);
+      toast.error(t('commitment_reactivate_failed') || 'Commitment could not be reactivated');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -207,13 +242,18 @@ export default function CommitmentsPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deleteCommitment(idToDelete);
-      setCommitments(mockService.getCommitments());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      toast.success(t('commitment_deleted_success') || 'Commitment deleted successfully');
+      try {
+        await commitmentsApi.deleteCommitment(idToDelete);
+        await refresh();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('commitment_deleted_success') || 'Commitment deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete commitment', error);
+        toast.error(t('commitment_delete_failed') || 'Commitment could not be deleted');
+      }
     }
   };
 
@@ -521,11 +561,15 @@ export default function CommitmentsPage() {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setIsCommUploading(true);
-                      const uploaded = await uploadFile(file);
+                      const uploaded = await filesApi.uploadFile(file).catch((error: any) => {
+                        console.error('Failed to upload commitment evidence', error);
+                        return null;
+                      });
                       setIsCommUploading(false);
                       e.target.value = '';
                       if (!uploaded) { toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed'); return; }
                       setCommEvidenceLink(uploaded.url);
+                      setCommEvidenceTitle(currentTitle => currentTitle || uploaded.name);
                       toast.success(isRtl ? 'تم رفع إثبات الإنجاز' : 'Evidence uploaded');
                     }}
                   />

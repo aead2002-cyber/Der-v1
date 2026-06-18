@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mockService, uploadFile, resolveAttachmentUrl } from '../services/mockService';
+import { commitmentsApi } from '@/services/commitmentsApi';
+import { frameworksApi } from '@/services/frameworksApi';
+import { incidentsApi } from '@/services/incidentsApi';
+import { lookupOptionsApi } from '@/services/lookupOptionsApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { proceduresApi } from '@/services/proceduresApi';
+import { standardsApi } from '@/services/standardsApi';
 import { useTableSort } from './shared/useTableSort';
 import { SortableTableHead } from './shared/SortableTableHead';
 import { Procedure, Commitment, PolicyItem, SecurityIncident, IncidentFeedback, IncidentNote, Evidence, ChangeRequest, ChangeRequestStatus, ChangeRequestType, Notification, AuditLog, LookupOption } from '../types';
@@ -454,18 +462,46 @@ export default function MyTasksPage() {
   const [allUserCommitments, setAllUserCommitments] = useState<Commitment[]>([]);
   const [allUserIncidents, setAllUserIncidents] = useState<SecurityIncident[]>([]);
   const [policies, setPolicies] = useState<any[]>([]);
+  const [allProcedures, setAllProcedures] = useState<Procedure[]>([]);
+  const [policyItems, setPolicyItems] = useState<PolicyItem[]>([]);
+  const [standards, setStandards] = useState<any[]>([]);
 
   useEffect(() => {
-    setPolicies(mockService.getPolicies());
-    setFrameworks(mockService.getFrameworks());
+    const loadSupportingData = async () => {
+      try {
+        const [policiesData, frameworksData, policyItemsData, standardsData] = await Promise.all([
+          policiesApi.getPolicies(),
+          frameworksApi.getFrameworks(),
+          policyItemsApi.getPolicyItems(),
+          standardsApi.getStandards(),
+        ]);
+        setPolicies(policiesData);
+        setFrameworks(frameworksData);
+        setPolicyItems(policyItemsData);
+        setStandards(standardsData);
+      } catch (error) {
+        console.error('Failed to load task supporting data', error);
+        toast.error(t('failed_to_load_data') || 'Failed to load data');
+      }
+    };
+
+    void loadSupportingData();
   }, []);
 
-  const refreshData = () => {
+  const refreshData = async () => {
     if (user) {
-      const userProcs = mockService.getProcedures().filter(p => p.assignedTo.includes(user.uid));
-      const userComms = mockService.getCommitments().filter(c => c.responsibleUser === user.uid);
-      const userIncs = mockService.getIncidents().filter(i => i.assignedTo === user.uid);
-      setLookupOptions(mockService.getLookupOptions());
+      try {
+      const [proceduresData, commitmentsData, incidentsData, lookupOptionsData] = await Promise.all([
+        proceduresApi.getProcedures(),
+        commitmentsApi.getCommitments(),
+        incidentsApi.getIncidents(),
+        lookupOptionsApi.getLookupOptions(),
+      ]);
+      const userProcs = proceduresData.filter(p => p.assignedTo.includes(user.uid));
+      const userComms = commitmentsData.filter(c => c.responsibleUser === user.uid);
+      const userIncs = incidentsData.filter(i => i.assignedTo === user.uid);
+      setAllProcedures(proceduresData);
+      setLookupOptions(lookupOptionsData);
 
       setAllUserProcedures(userProcs);
       setAllUserCommitments(userComms);
@@ -530,6 +566,10 @@ export default function MyTasksPage() {
         filteredIncidents = filteredIncidents.filter(i => i.status === incStatus);
       }
       setMyIncidents(filteredIncidents);
+      } catch (error) {
+        console.error('Failed to load task data', error);
+        toast.error(t('failed_to_load_data') || 'Failed to load data');
+      }
     }
   };
 
@@ -728,10 +768,7 @@ export default function MyTasksPage() {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const groupedProcedures = React.useMemo(() => {
-    const frameworks = mockService.getFrameworks();
-    const policies = mockService.getPolicies();
-    const items = mockService.getPolicyItems();
-    const standards = mockService.getStandards();
+    const items = policyItems;
     
     // Grouping structure: frameworks -> policies -> items -> procedures
     const groups: Record<string, Record<string, Record<string, Procedure[]>>> = {};
@@ -750,7 +787,7 @@ export default function MyTasksPage() {
     });
     
     return { groups, frameworks, policies, items, standards };
-  }, [myProcedures]);
+  }, [frameworks, policies, policyItems, standards, myProcedures]);
 
   const toggleFramework = (id: string) => {
     setExpandedFrameworks(prev => 
@@ -774,11 +811,10 @@ export default function MyTasksPage() {
     const totalProc = allUserProcedures.length;
     const completedProc = allUserProcedures.filter(p => p.status === 'completed').length;
     // Weighted completion: only leaf procedures count, each contributes its weight.
-    const allProcs = mockService.getProcedures();
-    const leaves = allUserProcedures.filter(p => !allProcs.some(c => c.parentId === p.id));
+    const leaves = allUserProcedures.filter(p => !allProcedures.some(c => c.parentId === p.id));
     let cw = 0, tw = 0;
     leaves.forEach(p => {
-      const w = mockService.getProcedureLeafWeight(p);
+      const w = Math.max(1, Math.min(10, Math.round(Number(p.weight) || 1)));
       tw += w;
       if (p.status === 'completed') cw += w;
     });
@@ -794,7 +830,7 @@ export default function MyTasksPage() {
     const pendingRequests = myReceivedRequests.filter(r => r.status === 'pending' || r.status === 'clarification_needed').length;
 
     return { completionRate, pendingProc, activeComm, overdue, activeInc, pendingRequests, total: totalProc + allUserCommitments.length + allUserIncidents.length };
-  }, [allUserProcedures, allUserCommitments, allUserIncidents, myReceivedRequests]);
+  }, [allProcedures, allUserProcedures, allUserCommitments, allUserIncidents, myReceivedRequests]);
 
   const ImportanceBadge = ({ importance }: { importance: string }) => {
     const colors: Record<string, string> = {
