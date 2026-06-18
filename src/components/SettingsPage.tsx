@@ -32,6 +32,7 @@ import { mockService, uploadFile, resolveAttachmentUrl, apiUrl } from '@/service
 import { departmentsApi } from '@/services/departmentsApi';
 import { teamsApi } from '@/services/teamsApi';
 import { lookupOptionsApi } from '@/services/lookupOptionsApi';
+import { notificationTemplatesApi } from '@/services/notificationTemplatesApi';
 import { Team, Department, NotificationSettings, EmailSettings, NotificationTemplate, ComplianceSettings, LookupOption } from '@/types';
 import { PermissionGroupsManager } from './PermissionGroupsManager';
 import { toast } from 'sonner';
@@ -116,7 +117,7 @@ export default function SettingsPage() {
     delete stored.smtpUser;
     delete stored.smtpPassword;
     setEmailSettings(stored);
-    setTemplates(mockService.getNotificationTemplates());
+    refreshNotificationTemplates();
     setComplianceSettings(mockService.getComplianceSettings());
   }, []);
 
@@ -141,6 +142,14 @@ export default function SettingsPage() {
       setLookupOptions(await lookupOptionsApi.getLookupOptions());
     } catch (error) {
       toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل قوائم الاختيارات' : 'Failed to load lookup options'));
+    }
+  };
+
+  const refreshNotificationTemplates = async () => {
+    try {
+      setTemplates(await notificationTemplatesApi.getNotificationTemplates());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل قوالب الإشعارات' : 'Failed to load notification templates'));
     }
   };
 
@@ -189,7 +198,7 @@ export default function SettingsPage() {
     toast.success(t('compliance_saved_success'));
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!editingTemplate?.name || !editingTemplate?.subject || !editingTemplate?.body) {
       toast.error(t('fill_required_fields'));
       return;
@@ -203,11 +212,19 @@ export default function SettingsPage() {
       type: editingTemplate.type || 'assignment'
     };
 
-    mockService.saveNotificationTemplate(template);
-    setTemplates(mockService.getNotificationTemplates());
-    setIsTemplateDialogOpen(false);
-    setEditingTemplate(null);
-    toast.success(t('template_saved_success'));
+    try {
+      if (editingTemplate.id) {
+        await notificationTemplatesApi.updateNotificationTemplate(editingTemplate.id, template);
+      } else {
+        await notificationTemplatesApi.createNotificationTemplate(template);
+      }
+      await refreshNotificationTemplates();
+      setIsTemplateDialogOpen(false);
+      setEditingTemplate(null);
+      toast.success(t('template_saved_success'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ القالب' : 'Failed to save template'));
+    }
   };
 
   const handleSaveNotifSettings = () => {

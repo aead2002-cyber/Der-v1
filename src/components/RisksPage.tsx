@@ -7,7 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { mockService, getStandardItemIds } from '@/services/mockService';
+import { risksApi } from '@/services/risksApi';
+import { proceduresApi } from '@/services/proceduresApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
 import { Risk, Procedure, Policy, Standard, PolicyItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -37,6 +41,27 @@ const scoreLabel = (score: number, isRtl: boolean): string => {
   return isRtl ? 'منخفض' : 'Low';
 };
 
+const getStandardItemIds = (standard: Standard | null | undefined): string[] => {
+  if (!standard) return [];
+  const itemIds = Array.isArray(standard.policyItemIds) ? standard.policyItemIds.filter(Boolean) : [];
+  if (itemIds.length > 0) return itemIds;
+  return standard.policyItemId ? [standard.policyItemId] : [];
+};
+
+const getRiskLikelihood = (risk: Risk, procedures: Procedure[]): number => {
+  const procedureIds = risk.procedureIds || [];
+  if (procedureIds.length === 0) return Math.max(1, Math.min(5, risk.likelihood || 1));
+
+  const linked = procedures.filter(procedure => procedureIds.includes(procedure.id));
+  if (linked.length === 0) return Math.max(1, Math.min(5, risk.likelihood || 1));
+
+  const incomplete = linked.filter(procedure => procedure.status !== 'completed').length;
+  if (incomplete === 0) return 1;
+  if (incomplete === linked.length) return 5;
+
+  return Math.max(1, Math.round((incomplete / linked.length) * 5));
+};
+
 export default function RisksPage() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
@@ -62,19 +87,26 @@ export default function RisksPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
-    setRisks(mockService.getRisks());
-    setProcedures(mockService.getProcedures());
-    setPolicies(mockService.getPolicies());
-    setPolicyItems(mockService.getPolicyItems());
-    setStandards(mockService.getStandards());
+    void refresh();
   }, []);
 
-  const refresh = () => {
-    setRisks(mockService.getRisks());
-    setProcedures(mockService.getProcedures());
-    setPolicies(mockService.getPolicies());
-    setPolicyItems(mockService.getPolicyItems());
-    setStandards(mockService.getStandards());
+  const refresh = async () => {
+    try {
+      const [nextRisks, nextProcedures, nextPolicies, nextPolicyItems, nextStandards] = await Promise.all([
+        risksApi.getRisks(),
+        proceduresApi.getProcedures(),
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+        standardsApi.getStandards(),
+      ]);
+      setRisks(nextRisks);
+      setProcedures(nextProcedures);
+      setPolicies(nextPolicies);
+      setPolicyItems(nextPolicyItems);
+      setStandards(nextStandards);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل المخاطر' : 'Failed to load risks'));
+    }
   };
 
   // Reset filters whenever the dialog reopens
@@ -102,7 +134,7 @@ export default function RisksPage() {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.nameAr || !form.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -120,23 +152,35 @@ export default function RisksPage() {
       createdAt: existing?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    mockService.saveRisk(risk);
+    try {
+    if (editingId) {
+      await risksApi.updateRisk(editingId, risk);
+    } else {
+      await risksApi.createRisk(risk);
+    }
     toast.success(editingId ? (isRtl ? 'تم تحديث الخطر' : 'Risk updated') : (isRtl ? 'تمت إضافة الخطر' : 'Risk added'));
     setDialogOpen(false);
-    refresh();
+    await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ الخطر' : 'Failed to save risk'));
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteConfirmId) return;
-    mockService.deleteRisk(deleteConfirmId);
+    try {
+    await risksApi.deleteRisk(deleteConfirmId);
     setDeleteConfirmId(null);
     toast.success(isRtl ? 'تم حذف الخطر' : 'Risk deleted');
-    refresh();
+    await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حذف الخطر' : 'Failed to delete risk'));
+    }
   };
 
   const enrichedRisks = useMemo(() => {
     return risks.map(r => {
-      const likelihood = mockService.getRiskLikelihood(r);
+      const likelihood = getRiskLikelihood(r, procedures);
       const score = likelihood * (r.impact || 1);
       return { ...r, effectiveLikelihood: likelihood, score };
     }).sort((a, b) => b.score - a.score);
