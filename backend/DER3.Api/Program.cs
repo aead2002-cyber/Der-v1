@@ -10,9 +10,24 @@ using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+const string LocalFrontendCorsPolicy = "LocalFrontendCors";
 
 // Add services
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(LocalFrontendCorsPolicy, policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://localhost:3000",
+                "https://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 builder.Services.AddAuthorization();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICompatibilityReadRepository, CompatibilityReadRepository>();
@@ -178,6 +193,8 @@ if (app.Environment.IsDevelopment())
 
 // For local HTTP testing
 // app.UseHttpsRedirection();
+
+app.UseCors(LocalFrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();

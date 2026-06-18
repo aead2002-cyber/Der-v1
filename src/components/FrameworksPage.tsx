@@ -13,6 +13,8 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { mockService } from '@/services/mockService';
+import { frameworksApi } from '@/services/frameworksApi';
+import { policiesApi } from '@/services/policiesApi';
 import { Framework, Policy } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -48,9 +50,21 @@ export default function FrameworksPage() {
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
-    setFrameworks(mockService.getFrameworks());
-    setPolicies(mockService.getPolicies());
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      const [frameworkRows, policyRows] = await Promise.all([
+        frameworksApi.getFrameworks(),
+        policiesApi.getPolicies(),
+      ]);
+      setFrameworks(frameworkRows);
+      setPolicies(policyRows);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load frameworks');
+    }
+  };
 
   const handleOpenDialog = (framework?: Framework) => {
     if (framework) {
@@ -63,7 +77,7 @@ export default function FrameworksPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.nameAr || !formData.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -79,13 +93,21 @@ export default function FrameworksPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveFramework(framework);
-    setFrameworks(mockService.getFrameworks());
-    setIsDialogOpen(false);
-    toast.success(editingFramework ? t('framework_updated_success') : t('framework_added_success'));
+    try {
+      if (editingFramework) {
+        await frameworksApi.updateFramework(editingFramework.id, framework);
+      } else {
+        await frameworksApi.createFramework(framework);
+      }
+      await loadData();
+      setIsDialogOpen(false);
+      toast.success(editingFramework ? t('framework_updated_success') : t('framework_added_success'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Framework could not be saved');
+    }
   };
 
-  const handleQuickSavePolicy = () => {
+  const handleQuickSavePolicy = async () => {
     if (!selectedFramework) return;
     if (!policyFormData.nameAr || !policyFormData.nameEn) {
       toast.error(t('fill_required_fields'));
@@ -103,10 +125,15 @@ export default function FrameworksPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.savePolicy(policy);
-    setPolicies(mockService.getPolicies());
-    setIsQuickPolicyOpen(false);
-    toast.success(t('policy_added_success') || 'Policy added successfully');
+    try {
+      await policiesApi.createPolicy(policy);
+      const policyRows = await policiesApi.getPolicies();
+      setPolicies(policyRows);
+      setIsQuickPolicyOpen(false);
+      toast.success(t('policy_added_success') || 'Policy added successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Policy could not be saved');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -119,13 +146,17 @@ export default function FrameworksPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deleteFramework(idToDelete);
-      setFrameworks(mockService.getFrameworks());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      toast.success(t('framework_deleted_success'));
+      try {
+        await frameworksApi.deleteFramework(idToDelete);
+        await loadData();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('framework_deleted_success'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Framework could not be deleted');
+      }
     }
   };
 

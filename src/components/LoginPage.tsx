@@ -14,7 +14,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
-import { mockService } from '@/services/mockService';
+import { authApi } from '@/services/authApi';
+import { tokenStorage } from '@/services/tokenStorage';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 
@@ -40,20 +41,18 @@ export default function LoginPage() {
     if (!email || !password) return;
 
     setLoading(true);
-    const result = await mockService.sendOTP(email, password);
-    setLoading(false);
-    if (result.ok && result.bypass) {
-      toast.success(isRtl ? 'تم تسجيل الدخول بنجاح' : 'Login successful');
-      window.location.href = '/my-tasks';
-      return;
-    }
-    if (result.ok) {
-      setStep('otp');
-      toast.success(isRtl ? 'تم إرسال رمز التحقق إلى بريدك الإلكتروني' : 'Verification code sent to your email');
-    } else if (result.reason === 'email_failed') {
-      toast.error(isRtl ? 'تعذّر إرسال الرمز عبر البريد — راجع إعدادات SMTP' : 'Could not send code by email — check SMTP settings');
-    } else {
-      toast.error(isRtl ? 'خطأ في البريد الإلكتروني أو كلمة المرور' : 'Invalid email or password');
+    try {
+      const result = await authApi.verify(email, password);
+      if (result.ok) {
+        setStep('otp');
+        toast.success(isRtl ? 'تم إرسال رمز التحقق إلى بريدك الإلكتروني' : 'Verification code sent to your email');
+      } else {
+        toast.error(result.error || (isRtl ? 'خطأ في البريد الإلكتروني أو كلمة المرور' : 'Invalid email or password'));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'فشل تسجيل الدخول' : 'Login failed'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,14 +62,7 @@ export default function LoginPage() {
     
     setIsResetLoading(true);
     try {
-      const success = await mockService.requestPasswordReset(resetEmail);
-      if (success) {
-        toast.success(isRtl ? 'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني' : 'Reset link sent to your email');
-        setIsForgotPassOpen(false);
-        setResetEmail('');
-      } else {
-        toast.error(isRtl ? 'البريد الإلكتروني غير مسجل' : 'Email not found');
-      }
+      toast.error(isRtl ? 'إعادة تعيين كلمة المرور غير متاحة حالياً' : 'Password reset is not available yet');
     } catch (error) {
       toast.error(isRtl ? 'فشل في إرسال الرابط' : 'Failed to send reset link');
     } finally {
@@ -83,17 +75,17 @@ export default function LoginPage() {
     if (!otp) return;
 
     setLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
-      const user = mockService.verifyOTP(email, otp);
+    try {
+      const session = await authApi.verifyOtp(email, otp);
+      tokenStorage.setToken(session.token);
+      tokenStorage.setUser(session.user);
+      toast.success(isRtl ? 'تم تسجيل الدخول بنجاح' : 'Login successful');
+      window.location.href = '/my-tasks'; // Force reload to update context/layout
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'رمز التحقق غير صحيح أو انتهت صلاحيته' : 'Invalid or expired verification code'));
+    } finally {
       setLoading(false);
-      if (user) {
-        toast.success(isRtl ? 'تم تسجيل الدخول بنجاح' : 'Login successful');
-        window.location.href = '/my-tasks'; // Force reload to update context/layout
-      } else {
-        toast.error(isRtl ? 'رمز التحقق غير صحيح أو انتهت صلاحيته' : 'Invalid or expired verification code');
-      }
-    }, 1000);
+    }
   };
 
   return (
@@ -185,9 +177,6 @@ export default function LoginPage() {
                           {t('forgot_password')}
                         </button>
                       </div>
-                      <p className="text-[10px] text-slate-400 px-1 italic">
-                        {isRtl ? 'الحسابات الجديدة بدون باسورد: استخدم password123 ثم غيّرها' : 'New accounts without a password: use password123, then change it'}
-                      </p>
                     </div>
                   </div>
                   <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all" disabled={loading}>

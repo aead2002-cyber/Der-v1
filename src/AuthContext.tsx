@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from './types';
 import { mockService } from './services/mockService';
+import { tokenStorage } from './services/tokenStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -19,23 +20,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = mockService.getCurrentUser();
+    const currentUser = tokenStorage.getToken() ? tokenStorage.getUser() : null;
     setUser(currentUser);
     setLoading(false);
   }, []);
 
   const logout = () => {
-    mockService.logout();
+    tokenStorage.clear();
     setUser(null);
     window.location.href = '/login';
   };
 
   const updateProfile = (updates: Partial<User>) => {
     if (user) {
-      const updatedUser = mockService.updateUser(user.uid, updates);
-      if (updatedUser) {
-        setUser(updatedUser);
-      }
+      const updatedUser = { ...user, ...updates };
+      tokenStorage.setUser(updatedUser);
+      setUser(updatedUser);
     }
   };
 
