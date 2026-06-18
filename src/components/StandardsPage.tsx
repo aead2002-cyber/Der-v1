@@ -58,6 +58,11 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/AuthContext';
+import { frameworksApi } from '@/services/frameworksApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
+import { standardClassificationsApi } from '@/services/standardClassificationsApi';
 
 export default function StandardsPage() {
   const { t, i18n } = useTranslation();
@@ -112,14 +117,29 @@ export default function StandardsPage() {
   });
 
   useEffect(() => {
-    setStandards(mockService.getStandards());
-    setPolicies(mockService.getPolicies());
-    setItems(mockService.getPolicyItems());
-    setFrameworks(mockService.getFrameworks());
-    setClassifications(mockService.getStandardClassifications());
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [standardRows, policyRows, itemRows, frameworkRows, classificationRows] = await Promise.all([
+        standardsApi.getStandards(),
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+        frameworksApi.getFrameworks(),
+        standardClassificationsApi.getStandardClassifications(),
+      ]);
+      setStandards(standardRows);
+      setPolicies(policyRows);
+      setItems(itemRows);
+      setFrameworks(frameworkRows);
+      setClassifications(classificationRows);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load standards');
+    }
     setUsers(mockService.getUsers());
     setProcedures(mockService.getProcedures());
-  }, []);
+  };
 
   const handleDelete = (id: string) => {
     const standardProcedures = procedures.filter(p => p.standardId === id);
@@ -131,17 +151,21 @@ export default function StandardsPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deleteStandard(idToDelete);
-      setStandards(mockService.getStandards());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      toast.success(t('standard_deleted_success'));
+      try {
+        await standardsApi.deleteStandard(idToDelete);
+        await loadData();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('standard_deleted_success'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Standard could not be deleted');
+      }
     }
   };
 
-  const handleQuickSaveProcedure = () => {
+  const handleQuickSaveProcedure = async () => {
     if (!selectedStandard) return;
     if (!quickAddData.nameAr || !quickAddData.nameEn) {
       toast.error(t('fill_required_fields'));
@@ -162,11 +186,11 @@ export default function StandardsPage() {
     toast.success(t('procedure_added_success') || 'Procedure added successfully');
     setIsQuickAddOpen(false);
     // Refresh data to show updated progress and counts
-    setStandards(mockService.getStandards());
+    await loadData();
     setProcedures(mockService.getProcedures());
   };
 
-  const handleSaveClass = () => {
+  const handleSaveClass = async () => {
     if (!editingClass?.nameAr || !editingClass?.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -180,10 +204,18 @@ export default function StandardsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveStandardClassification(classification);
-    setClassifications(mockService.getStandardClassifications());
-    setEditingClass(null);
-    toast.success(editingClass.id ? t('classification_updated_success') : t('classification_added_success'));
+    try {
+      if (editingClass.id) {
+        await standardClassificationsApi.updateStandardClassification(editingClass.id, classification);
+      } else {
+        await standardClassificationsApi.createStandardClassification(classification);
+      }
+      await loadData();
+      setEditingClass(null);
+      toast.success(editingClass.id ? t('classification_updated_success') : t('classification_added_success'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Classification could not be saved');
+    }
   };
 
   const handleDeleteClass = (id: string) => {
@@ -191,13 +223,17 @@ export default function StandardsPage() {
     setIsDeleteClassConfirmOpen(true);
   };
 
-  const handleConfirmDeleteClass = () => {
+  const handleConfirmDeleteClass = async () => {
     if (idToConfirmDeleteClass) {
-      mockService.deleteStandardClassification(idToConfirmDeleteClass);
-      setClassifications(mockService.getStandardClassifications());
-      setIsDeleteClassConfirmOpen(false);
-      setIdToConfirmDeleteClass(null);
-      toast.success(t('classification_deleted_success'));
+      try {
+        await standardClassificationsApi.deleteStandardClassification(idToConfirmDeleteClass);
+        await loadData();
+        setIsDeleteClassConfirmOpen(false);
+        setIdToConfirmDeleteClass(null);
+        toast.success(t('classification_deleted_success'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Classification could not be deleted');
+      }
     }
   };
 
@@ -415,7 +451,7 @@ export default function StandardsPage() {
             </DialogContent>
           </Dialog>
 
-          {can('standards.import') && <StandardsImport onDone={() => setStandards(mockService.getStandards())} />}
+          {can('standards.import') && <StandardsImport onDone={loadData} />}
           <ExportMenu
             title={isRtl ? 'المعايير' : 'Standards'}
             filename="standards"
@@ -883,13 +919,13 @@ export default function StandardsPage() {
                   </h3>
                   
                   <div className="space-y-4">
-                    {mockService.getProcedures().filter(p => p.standardId === selectedStandard.id).length === 0 ? (
+                    {procedures.filter(p => p.standardId === selectedStandard.id).length === 0 ? (
                       <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-border-subtle">
                         <FileText className="w-10 h-10 mx-auto mb-2 text-text-muted opacity-20" />
                         <p className="text-text-muted font-medium">{t('no_procedures_found')}</p>
                       </div>
                     ) : (
-                      mockService.getProcedures()
+                      procedures
                         .filter(p => p.standardId === selectedStandard.id)
                         .map((proc, idx) => (
                           <div key={proc.id} className="bg-white rounded-xl border border-border-subtle p-4 hover:shadow-md transition-shadow relative group">
@@ -1234,7 +1270,7 @@ export default function StandardsPage() {
       <StandardFormDialog
         open={standardDialogOpen}
         standardId={editingStandardId}
-        onSaved={() => setStandards(mockService.getStandards())}
+        onSaved={loadData}
         onClose={() => setStandardDialogOpen(false)}
       />
 

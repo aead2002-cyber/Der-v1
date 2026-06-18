@@ -19,10 +19,11 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
 import { PolicyItem, Policy } from '@/types';
 import { toast } from 'sonner';
 import { AttachmentsField } from './shared/AttachmentsField';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
 
 export default function AddPolicyItemPage() {
   const { t, i18n } = useTranslation();
@@ -43,16 +44,26 @@ export default function AddPolicyItemPage() {
   });
 
   useEffect(() => {
-    setPolicies(mockService.getPolicies());
-    const items = mockService.getPolicyItems();
-    setAllItems(items);
-    
-    if (id) {
-      const item = items.find(i => i.id === id);
-      if (item) {
-        setFormData(item);
+    const loadData = async () => {
+      try {
+        const [policyRows, itemRows] = await Promise.all([
+          policiesApi.getPolicies(),
+          policyItemsApi.getPolicyItems(),
+        ]);
+        setPolicies(policyRows);
+        setAllItems(itemRows);
+        
+        if (id) {
+          const item = itemRows.find(i => i.id === id);
+          if (item) {
+            setFormData(item);
+          }
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load policy item');
       }
-    }
+    };
+    loadData();
   }, [id]);
 
   const availableParents = allItems.filter(i => 
@@ -68,7 +79,7 @@ export default function AddPolicyItemPage() {
     return isDescendant(item.parentId, potentialAncestorId, items);
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nameAr || !formData.nameEn || !formData.policyId) {
       toast.error(t('please_fill_all_fields'));
@@ -89,9 +100,17 @@ export default function AddPolicyItemPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.savePolicyItem(itemData);
-    toast.success(id ? t('policy_item_updated_success') : t('policy_item_added_success'));
-    navigate('/policy-items');
+    try {
+      if (id) {
+        await policyItemsApi.updatePolicyItem(id, itemData);
+      } else {
+        await policyItemsApi.createPolicyItem(itemData);
+      }
+      toast.success(id ? t('policy_item_updated_success') : t('policy_item_added_success'));
+      navigate('/policy-items');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Policy item could not be saved');
+    }
   };
 
   return (
@@ -125,7 +144,6 @@ export default function AddPolicyItemPage() {
               <Select 
                 value={formData.policyId || ''} 
                 onValueChange={(val) => {
-                  const policyItems = mockService.getPolicyItems(val).filter(i => !i.parentId);
                   setFormData({ ...formData, policyId: val, parentId: '' });
                 }}
               >

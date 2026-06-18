@@ -3,13 +3,16 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Upload, Download, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { mockService, invalidateLocalCache, STORAGE_KEY_NAMES, apiUrl } from '@/services/mockService';
+import { mockService } from '@/services/mockService';
+import { proceduresApi } from '@/services/proceduresApi';
+import { policiesApi } from '@/services/policiesApi';
+import { standardsApi } from '@/services/standardsApi';
 import { Procedure, Policy, Standard, User } from '@/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 interface Props {
-  onDone?: () => void;
+  onDone?: () => void | Promise<void>;
 }
 
 const STATUS_VALUES = new Set(['not_started', 'in_progress', 'completed']);
@@ -65,9 +68,11 @@ export function ProceduresImport({ onDone }: Props) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [busy]);
 
-  const downloadTemplate = () => {
-    const policies = mockService.getPolicies();
-    const standards = mockService.getStandards();
+  const downloadTemplate = async () => {
+    const [policies, standards] = await Promise.all([
+      policiesApi.getPolicies(),
+      standardsApi.getStandards(),
+    ]);
     const users = mockService.getUsers();
 
     // Sheet 1: instructions + headers + sample row
@@ -134,8 +139,10 @@ export function ProceduresImport({ onDone }: Props) {
       const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
       setProgress({ phase: isRtl ? 'التحقق من البيانات...' : 'Validating rows...', current: 0, total: rows.length });
 
-      const policies: Policy[] = mockService.getPolicies();
-      const standards: Standard[] = mockService.getStandards();
+      const [policies, standards] = await Promise.all([
+        policiesApi.getPolicies(),
+        standardsApi.getStandards(),
+      ]);
       const users: User[] = mockService.getUsers();
 
       const findPolicy = (ar: string, en: string): Policy | undefined => {
@@ -229,39 +236,11 @@ export function ProceduresImport({ onDone }: Props) {
         return;
       }
 
-      // Single bulk POST: existing + all new — atomic, no per-row silent failures.
-      setProgress({ phase: isRtl ? 'حفظ الإجراءات في الخادم...' : 'Saving to server...', current: newProcedures.length, total: newProcedures.length });
-      const existing = mockService.getProcedures();
-      // Normalize ISO datetime strings to YYYY-MM-DD so MSSQL DATE columns accept them
-      const stripDate = (v: any): any => {
-        if (typeof v !== 'string') return v;
-        const m = v.match(/^(\d{4}-\d{2}-\d{2})/);
-        return m ? m[1] : v;
-      };
-      const cleaned = existing.map((p: any) => ({
-        ...p,
-        startDate: stripDate(p.startDate),
-        endDate: stripDate(p.endDate)
-      }));
-      const payload = [...cleaned, ...newProcedures];
-
-      const res = await fetch(`${apiUrl}/procedures/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json().catch(() => ({} as any));
-
-      if (!res.ok || !data.success) {
-        const msg = data.error || `HTTP ${res.status}`;
-        toast.error(isRtl ? `فشل حفظ الدفعة: ${msg}` : `Bulk save failed: ${msg}`);
-        console.error('Bulk save failed:', data);
-        return;
+      setProgress({ phase: isRtl ? 'حفظ الإجراءات في الخادم...' : 'Saving to server...', current: 0, total: newProcedures.length });
+      for (let i = 0; i < newProcedures.length; i++) {
+        await proceduresApi.createProcedure(newProcedures[i]);
+        setProgress(p => ({ ...p, current: i + 1 }));
       }
-
-      // Bypass cache so the next read fetches the freshly-persisted payload
-      invalidateLocalCache(STORAGE_KEY_NAMES.PROCEDURES);
-      mockService.getProcedures();
 
       const inserted = newProcedures.length;
       if (errors.length > 0) {
@@ -272,7 +251,7 @@ export function ProceduresImport({ onDone }: Props) {
       } else {
         toast.success(isRtl ? `تم استيراد ${inserted} إجراء بنجاح` : `Imported ${inserted} procedures successfully`);
       }
-      onDone?.();
+      await onDone?.();
     } catch (err: any) {
       console.error(err);
       toast.error(isRtl ? `فشل قراءة الملف: ${err?.message || ''}` : `Could not read file: ${err?.message || ''}`);
@@ -297,7 +276,7 @@ export function ProceduresImport({ onDone }: Props) {
       <Button
         type="button"
         variant="outline"
-        onClick={downloadTemplate}
+        onClick={() => { downloadTemplate().catch(err => toast.error(err?.message || 'Could not create template')); }}
         className="rounded-lg border-border-subtle h-11 px-4 font-bold flex items-center gap-2"
       >
         <Download className="w-4 h-4" />

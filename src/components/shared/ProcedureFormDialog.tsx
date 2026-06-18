@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { mockService } from '@/services/mockService';
+import { proceduresApi } from '@/services/proceduresApi';
+import { policiesApi } from '@/services/policiesApi';
+import { standardsApi } from '@/services/standardsApi';
 import { Procedure, Policy, Standard, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { AttachmentsField } from './AttachmentsField';
@@ -20,7 +23,7 @@ interface Props {
   open: boolean;
   procedureId: string | null;
   parentId?: string;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -49,16 +52,25 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
+  const [allProcedures, setAllProcedures] = useState<Procedure[]>([]);
   const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
     if (!open) return;
-    setPolicies(mockService.getPolicies());
-    setStandards(mockService.getStandards());
-    setUsers(mockService.getUsers());
+    const loadData = async () => {
+      try {
+        const [policyRows, standardRows, procedureRows] = await Promise.all([
+          policiesApi.getPolicies(),
+          standardsApi.getStandards(),
+          proceduresApi.getProcedures(),
+        ]);
+        setPolicies(policyRows);
+        setStandards(standardRows);
+        setAllProcedures(procedureRows);
+        setUsers(mockService.getUsers());
 
-    if (procedureId) {
-      const existing = mockService.getProcedures().find(p => p.id === procedureId);
+        if (procedureId) {
+          const existing = procedureRows.find(p => p.id === procedureId);
       if (existing) {
         setFormData({
           nameAr: existing.nameAr,
@@ -77,9 +89,9 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
           attachments: existing.attachments || [],
           weight: typeof existing.weight === 'number' ? existing.weight : 1,
         });
-      }
-    } else if (parentId) {
-      const parent = mockService.getProcedures().find(p => p.id === parentId);
+          }
+        } else if (parentId) {
+          const parent = procedureRows.find(p => p.id === parentId);
       if (parent) {
         setFormData({
           nameAr: '',
@@ -98,19 +110,26 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
           attachments: [],
           weight: 1,
         });
+          }
+        } else {
+          setFormData(emptyForm);
+        }
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err?.message || 'Could not load procedure data');
       }
-    } else {
-      setFormData(emptyForm);
-    }
+    };
+
+    loadData();
   }, [open, procedureId, parentId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.nameAr || !formData.nameEn || !formData.policyId || !formData.standardId) {
       toast.error(t('fill_required_fields'));
       return;
     }
 
-    const existingForEdit = procedureId ? mockService.getProcedures().find(p => p.id === procedureId) : null;
+    const existingForEdit = procedureId ? allProcedures.find(p => p.id === procedureId) : null;
     const clampedWeight = Math.max(1, Math.min(10, Math.round(Number(formData.weight) || 1)));
     const procedure: Procedure = {
       id: procedureId || Math.random().toString(36).substr(2, 9),
@@ -122,7 +141,17 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
       updatedAt: new Date().toISOString(),
     } as Procedure;
 
-    mockService.saveProcedure(procedure);
+    try {
+      if (procedureId) {
+        await proceduresApi.updateProcedure(procedureId, procedure);
+      } else {
+        await proceduresApi.createProcedure(procedure);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || 'Could not save procedure');
+      return;
+    }
 
     const settings = mockService.getNotificationSettings();
     if (settings.notifyOnAssignment) {
@@ -144,13 +173,13 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
         ? t('procedure_updated_success') || 'Procedure updated successfully'
         : t('procedure_added_success') || 'Procedure added successfully'
     );
-    onSaved();
+    await onSaved();
     onClose();
   };
 
-  const parentProc = parentId && !procedureId ? mockService.getProcedures().find(p => p.id === parentId) : null;
+  const parentProc = parentId && !procedureId ? allProcedures.find(p => p.id === parentId) : null;
 
-  const allProcs = open ? mockService.getProcedures() : [];
+  const allProcs = open ? allProcedures : [];
   const hasChildren = !!procedureId && allProcs.some(p => p.parentId === procedureId);
   const computedParentWeight = hasChildren ? mockService.getProcedureEffectiveWeight(procedureId!, allProcs) : 0;
 

@@ -25,7 +25,9 @@ import {
   DialogFooter 
 } from '@/components/ui/dialog';
 import { mockService } from '@/services/mockService';
-import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { evidenceApi } from '@/services/evidenceApi';
+import { filesApi, isBackendFileUrl, resolveFileUrl } from '@/services/filesApi';
+import { proceduresApi } from '@/services/proceduresApi';
 import { Procedure, Evidence, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -54,19 +56,32 @@ export default function EvidencePage() {
     type: 'PDF'
   });
 
-  useEffect(() => {
+  const loadData = React.useCallback(async () => {
     setUsers(mockService.getUsers());
-    if (id) {
-      const proc = mockService.getProcedures().find(p => p.id === id);
+    if (!id) return;
+
+    try {
+      const [procedures, evidenceRows] = await Promise.all([
+        proceduresApi.getProcedures(),
+        evidenceApi.getEvidence(id),
+      ]);
+      const proc = procedures.find(p => p.id === id);
       if (proc) {
         setProcedure(proc);
-        setEvidenceList(mockService.getEvidence(id));
+        setEvidenceList(evidenceRows);
       } else {
         toast.error(t('procedure_not_found') || 'Procedure not found');
         navigate('/procedures');
       }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || 'Could not load evidence');
     }
   }, [id, navigate, t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -101,7 +116,14 @@ export default function EvidencePage() {
 
     if (sourceType === 'file' && selectedFile) {
       setIsUploadingEvidence(true);
-      const uploaded = await uploadFile(selectedFile);
+      let uploaded;
+      try {
+        uploaded = await filesApi.uploadFile(selectedFile);
+      } catch (err: any) {
+        setIsUploadingEvidence(false);
+        toast.error(err?.message || t('upload_failed') || 'Upload failed');
+        return;
+      }
       setIsUploadingEvidence(false);
       if (!uploaded) {
         toast.error(t('upload_failed') || 'Upload failed');
@@ -122,8 +144,14 @@ export default function EvidencePage() {
       uploadedAt: new Date().toISOString(),
     };
 
-    mockService.saveEvidence(evidence);
-    setEvidenceList(mockService.getEvidence(id!));
+    try {
+      await evidenceApi.createEvidence(evidence);
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || 'Could not save evidence');
+      return;
+    }
     setIsAddDialogOpen(false);
     setNewEvidence({ name: '', description: '', url: '', type: 'PDF' });
     setSelectedFile(null);
@@ -136,7 +164,7 @@ export default function EvidencePage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
       // Defense in depth: enforce ownership / full-delete permission at the action layer.
       const target = evidenceList.find(e => e.id === idToDelete);
@@ -147,11 +175,19 @@ export default function EvidencePage() {
         setIdToDelete(null);
         return;
       }
-      mockService.deleteEvidence(idToDelete);
-      setEvidenceList(mockService.getEvidence(id!));
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      toast.success(t('evidence_deleted_success') || 'Evidence deleted successfully');
+      try {
+        await evidenceApi.deleteEvidence(idToDelete);
+        if (target?.url && isBackendFileUrl(target.url)) {
+          await filesApi.deleteFile(target.url).catch(err => console.warn('File delete failed:', err));
+        }
+        await loadData();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('evidence_deleted_success') || 'Evidence deleted successfully');
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err?.message || 'Could not delete evidence');
+      }
     }
   };
 
@@ -248,14 +284,17 @@ export default function EvidencePage() {
                       {new Date(evidence.uploadedAt).toLocaleDateString(i18n.language)}
                     </div>
                     <a
-                      href={resolveAttachmentUrl(evidence.url) || evidence.url}
+                      href={resolveFileUrl(evidence.url) || evidence.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => {
-                        if (!resolveAttachmentUrl(evidence.url)) {
+                        e.preventDefault();
+                        if (!resolveFileUrl(evidence.url) && !/^https?:\/\//i.test(evidence.url)) {
                           e.preventDefault();
                           toast.error(t('attachment_unavailable') || 'Attachment unavailable — please re-upload');
+                          return;
                         }
+                        filesApi.openFile(evidence.url).catch(err => toast.error(err?.message || 'Could not open file'));
                       }}
                       className="text-primary text-xs font-bold flex items-center gap-1 hover:underline"
                     >

@@ -19,11 +19,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
 import { Standard, Policy, StandardClassification, PolicyItem } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AttachmentsField } from './shared/AttachmentsField';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
+import { standardClassificationsApi } from '@/services/standardClassificationsApi';
 
 export default function AddStandardPage() {
   const { t, i18n } = useTranslation();
@@ -34,6 +37,7 @@ export default function AddStandardPage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [classifications, setClassifications] = useState<StandardClassification[]>([]);
   const [items, setItems] = useState<PolicyItem[]>([]);
+  const [existingCreatedAt, setExistingCreatedAt] = useState<any>(null);
   const [formData, setFormData] = useState({
     nameAr: '',
     nameEn: '',
@@ -48,34 +52,55 @@ export default function AddStandardPage() {
   });
 
   useEffect(() => {
-    setPolicies(mockService.getPolicies());
-    setClassifications(mockService.getStandardClassifications());
+    const loadData = async () => {
+      try {
+        const [policyRows, classificationRows, standardRows] = await Promise.all([
+          policiesApi.getPolicies(),
+          standardClassificationsApi.getStandardClassifications(),
+          standardsApi.getStandards(),
+        ]);
+        setPolicies(policyRows);
+        setClassifications(classificationRows);
 
-    if (id) {
-      const existing = mockService.getStandards().find(s => s.id === id);
-      if (existing) {
-        setFormData({
-          nameAr: existing.nameAr,
-          nameEn: existing.nameEn,
-          descriptionAr: existing.descriptionAr,
-          descriptionEn: existing.descriptionEn,
-          policyId: existing.policyId,
-          policyItemId: existing.policyItemId || '',
-          classifications: existing.classifications || [],
-          attachments: existing.attachments || [],
-          potentialRisksAr: (existing as any).potentialRisksAr || '',
-          potentialRisksEn: (existing as any).potentialRisksEn || '',
-        });
+        if (id) {
+          const existing = standardRows.find(s => s.id === id);
+          if (existing) {
+            const linkedItemIds = existing.policyItemIds?.length ? existing.policyItemIds : existing.policyItemId ? [existing.policyItemId] : [];
+            setExistingCreatedAt(existing.createdAt);
+            setFormData({
+              nameAr: existing.nameAr,
+              nameEn: existing.nameEn,
+              descriptionAr: existing.descriptionAr,
+              descriptionEn: existing.descriptionEn,
+              policyId: existing.policyId,
+              policyItemId: linkedItemIds[0] || '',
+              classifications: existing.classifications || [],
+              attachments: existing.attachments || [],
+              potentialRisksAr: (existing as any).potentialRisksAr || '',
+              potentialRisksEn: (existing as any).potentialRisksEn || '',
+            });
+          }
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load standard');
       }
-    }
+    };
+    loadData();
   }, [id]);
 
   useEffect(() => {
-    if (formData.policyId) {
-      setItems(mockService.getPolicyItems(formData.policyId));
-    } else {
-      setItems([]);
-    }
+    const loadItems = async () => {
+      if (formData.policyId) {
+        try {
+          setItems(await policyItemsApi.getPolicyItems(formData.policyId));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Failed to load policy items');
+        }
+      } else {
+        setItems([]);
+      }
+    };
+    loadItems();
   }, [formData.policyId]);
 
   const toggleClassification = (classId: string) => {
@@ -87,7 +112,7 @@ export default function AddStandardPage() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.nameAr || !formData.nameEn || !formData.policyId) {
       toast.error(t('fill_required_fields'));
       return;
@@ -96,13 +121,23 @@ export default function AddStandardPage() {
     const standard: Standard = {
       id: id || Math.random().toString(36).substr(2, 9),
       ...formData,
-      createdAt: id ? (mockService.getStandards().find(s => s.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+      policyItemId: formData.policyItemId || undefined,
+      policyItemIds: formData.policyItemId ? [formData.policyItemId] : [],
+      createdAt: existingCreatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveStandard(standard);
-    toast.success(id ? t('standard_updated_success') : t('standard_added_success'));
-    navigate('/standards');
+    try {
+      if (id) {
+        await standardsApi.updateStandard(id, standard);
+      } else {
+        await standardsApi.createStandard(standard);
+      }
+      toast.success(id ? t('standard_updated_success') : t('standard_added_success'));
+      navigate('/standards');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Standard could not be saved');
+    }
   };
 
   return (

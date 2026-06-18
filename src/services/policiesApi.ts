@@ -9,6 +9,11 @@ interface WriteResponse {
   error?: string;
 }
 
+interface DeleteResponse {
+  success?: boolean;
+  error?: string;
+}
+
 export const policiesApi = {
   getPolicies: async (): Promise<Policy[]> => {
     const response = await apiRequest<unknown>('/api/policies');
@@ -21,6 +26,27 @@ export const policiesApi = {
       body: policy,
     });
     return unwrapPolicy(response);
+  },
+
+  updatePolicy: async (id: string, policy: PolicyPayload): Promise<Policy> => {
+    const response = await apiRequest<unknown>(`/api/policies/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: policy,
+    });
+    return unwrapPolicy(response);
+  },
+
+  deletePolicy: async (id: string): Promise<void> => {
+    const response = await apiRequest<unknown>(`/api/policies/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+
+    if (response && typeof response === 'object') {
+      const result = response as DeleteResponse;
+      if (result.success === false) {
+        throw new Error(result.error || 'Policy could not be deleted');
+      }
+    }
   },
 };
 

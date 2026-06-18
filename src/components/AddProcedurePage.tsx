@@ -23,6 +23,9 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { mockService } from '@/services/mockService';
+import { proceduresApi } from '@/services/proceduresApi';
+import { policiesApi } from '@/services/policiesApi';
+import { standardsApi } from '@/services/standardsApi';
 import { Procedure, Policy, Standard, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -39,6 +42,7 @@ export default function AddProcedurePage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
+  const [allProcedures, setAllProcedures] = useState<Procedure[]>([]);
 
   const [formData, setFormData] = useState({
     nameAr: '',
@@ -58,12 +62,20 @@ export default function AddProcedurePage() {
   });
 
   useEffect(() => {
-    setPolicies(mockService.getPolicies());
-    setStandards(mockService.getStandards());
-    setUsers(mockService.getUsers());
+    const loadData = async () => {
+      try {
+        const [policyRows, standardRows, procedureRows] = await Promise.all([
+          policiesApi.getPolicies(),
+          standardsApi.getStandards(),
+          proceduresApi.getProcedures(),
+        ]);
+        setPolicies(policyRows);
+        setStandards(standardRows);
+        setAllProcedures(procedureRows);
+        setUsers(mockService.getUsers());
 
-    if (id) {
-      const existing = mockService.getProcedures().find(p => p.id === id);
+        if (id) {
+          const existing = procedureRows.find(p => p.id === id);
       if (existing) {
         setFormData({
           nameAr: existing.nameAr,
@@ -81,9 +93,9 @@ export default function AddProcedurePage() {
           frequency: existing.frequency || 'annual',
           attachments: existing.attachments || [],
         });
-      }
-    } else if (parentId) {
-      const parent = mockService.getProcedures().find(p => p.id === parentId);
+          }
+        } else if (parentId) {
+          const parent = procedureRows.find(p => p.id === parentId);
       if (parent) {
         setFormData({
           nameAr: '',
@@ -101,17 +113,24 @@ export default function AddProcedurePage() {
           frequency: parent.frequency || 'annual',
           attachments: [],
         });
+          }
+        }
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err?.message || 'Could not load procedure data');
       }
-    }
+    };
+
+    loadData();
   }, [id, parentId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.nameAr || !formData.nameEn || !formData.policyId || !formData.standardId) {
       toast.error(t('fill_required_fields'));
       return;
     }
 
-    const existingForEdit = id ? mockService.getProcedures().find(p => p.id === id) : null;
+    const existingForEdit = id ? allProcedures.find(p => p.id === id) : null;
     const procedure: Procedure = {
       id: id || Math.random().toString(36).substr(2, 9),
       parentId: existingForEdit?.parentId ?? parentId,
@@ -121,7 +140,17 @@ export default function AddProcedurePage() {
       updatedAt: new Date().toISOString(),
     } as Procedure;
 
-    mockService.saveProcedure(procedure);
+    try {
+      if (id) {
+        await proceduresApi.updateProcedure(id, procedure);
+      } else {
+        await proceduresApi.createProcedure(procedure);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || 'Could not save procedure');
+      return;
+    }
     
     // Add Notifications for each assigned user if enabled
     const settings = mockService.getNotificationSettings();
@@ -165,7 +194,7 @@ export default function AddProcedurePage() {
             </h1>
             <p className="text-text-muted mt-1">{t('manage_procedures_desc')}</p>
             {parentId && !id && (() => {
-              const parent = mockService.getProcedures().find(p => p.id === parentId);
+              const parent = allProcedures.find(p => p.id === parentId);
               if (!parent) return null;
               return (
                 <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-[12px] font-bold text-emerald-700">

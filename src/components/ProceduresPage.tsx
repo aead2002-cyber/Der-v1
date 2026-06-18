@@ -41,6 +41,10 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { mockService } from '@/services/mockService';
+import { proceduresApi } from '@/services/proceduresApi';
+import { policiesApi } from '@/services/policiesApi';
+import { standardsApi } from '@/services/standardsApi';
+import { frameworksApi } from '@/services/frameworksApi';
 import { ExportMenu } from './shared/ExportMenu';
 import { ProceduresImport } from './shared/ProceduresImport';
 import { ProcedureFormDialog } from './shared/ProcedureFormDialog';
@@ -52,6 +56,7 @@ import { cn } from '@/lib/utils';
 
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/AuthContext';
+import { toast } from 'sonner';
 
 export default function ProceduresPage() {
   const { t, i18n } = useTranslation();
@@ -81,70 +86,45 @@ export default function ProceduresPage() {
 
   const isRtl = i18n.language === 'ar';
 
-  useEffect(() => {
-    setUsers(mockService.getUsers());
-    setPolicies(mockService.getPolicies());
-    setStandards(mockService.getStandards());
-    setFrameworks(mockService.getFrameworks());
-    
-    // Add some mock data if empty
-    const existing = mockService.getProcedures();
-    if (existing.length === 0) {
-      const mockProcedures: Procedure[] = [
-        {
-          id: '1',
-          policyId: 'p1',
-          standardId: 's1',
-          nameAr: 'تحديث سياسة كلمات المرور',
-          nameEn: 'Update Password Policy',
-          descriptionAr: 'تحديث متطلبات تعقيد كلمات المرور',
-          descriptionEn: 'Update password complexity requirements',
-          status: 'in_progress',
-          importance: 'high',
-          startDate: '2024-01-01',
-          endDate: '2024-06-01',
-          assignedTo: ['1'],
-          assignedTeams: ['Security'],
-          isPeriodic: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          policyId: 'p1',
-          standardId: 's2',
-          nameAr: 'مراجعة سجلات الدخول',
-          nameEn: 'Review Access Logs',
-          descriptionAr: 'مراجعة دورية لسجلات الدخول للأنظمة الحساسة',
-          descriptionEn: 'Periodic review of access logs for sensitive systems',
-          status: 'completed',
-          importance: 'medium',
-          startDate: '2024-02-01',
-          endDate: '2024-03-01',
-          assignedTo: ['1'],
-          assignedTeams: ['Audit'],
-          isPeriodic: true,
-          frequency: 'quarterly',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
-      mockProcedures.forEach(p => mockService.saveProcedure(p));
+  const loadData = React.useCallback(async () => {
+    try {
+      const [procedureRows, policyRows, standardRows, frameworkRows] = await Promise.all([
+        proceduresApi.getProcedures(),
+        policiesApi.getPolicies(),
+        standardsApi.getStandards(),
+        frameworksApi.getFrameworks(),
+      ]);
+      setProcedures(procedureRows);
+      setPolicies(policyRows);
+      setStandards(standardRows);
+      setFrameworks(frameworkRows);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || 'Could not load procedures');
     }
-    setProcedures(mockService.getProcedures());
+    setUsers(mockService.getUsers());
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleDelete = (id: string) => {
     setIdToDelete(id);
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deleteProcedure(idToDelete);
-      setProcedures(mockService.getProcedures());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
+      try {
+        await proceduresApi.deleteProcedure(idToDelete);
+        await loadData();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err?.message || 'Could not delete procedure');
+      }
     }
   };
 
@@ -363,7 +343,7 @@ export default function ProceduresPage() {
               {isRtl ? 'أكورديون' : 'Accordion'}
             </button>
           </div>
-          {can('procedures.import') && <ProceduresImport onDone={() => setProcedures(mockService.getProcedures())} />}
+          {can('procedures.import') && <ProceduresImport onDone={loadData} />}
           <ExportMenu
             title={isRtl ? 'الإجراءات' : 'Procedures'}
             filename="procedures"
@@ -813,7 +793,7 @@ export default function ProceduresPage() {
         open={procDialogOpen}
         procedureId={editingProcedureId}
         parentId={procParentId}
-        onSaved={() => setProcedures(mockService.getProcedures())}
+        onSaved={loadData}
         onClose={() => setProcDialogOpen(false)}
       />
     </div>

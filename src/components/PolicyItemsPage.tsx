@@ -46,6 +46,9 @@ import { PolicyItem, Policy, Standard, Framework } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/AuthContext';
+import { frameworksApi } from '@/services/frameworksApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
 
 export default function PolicyItemsPage() {
   const { t, i18n } = useTranslation();
@@ -101,55 +104,25 @@ export default function PolicyItemsPage() {
   });
 
   useEffect(() => {
-    let items = mockService.getPolicyItems();
-    const policies = mockService.getPolicies();
-    
-    if (items.length === 0 && policies.length > 0) {
-      const mockItems: PolicyItem[] = [
-        {
-          id: 'item1',
-          policyId: 'p1',
-          order: 1,
-          nameAr: 'البند الأول: إدارة الأصول',
-          nameEn: 'Item 1: Asset Management',
-          descriptionAr: 'وصف إدارة الأصول',
-          descriptionEn: 'Description of asset management',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'item2',
-          policyId: 'p1',
-          order: 2,
-          nameAr: 'البند الثاني: إدارة الهوية',
-          nameEn: 'Item 2: Identity Management',
-          descriptionAr: 'وصف إدارة الهوية',
-          descriptionEn: 'Description of identity management',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'item2-1',
-          policyId: 'p1',
-          parentId: 'item2',
-          order: 1,
-          nameAr: 'البند الفرعي: التحقق الثنائي',
-          nameEn: 'Sub-item: Multi-factor Authentication',
-          descriptionAr: 'وصف التحقق الثنائي',
-          descriptionEn: 'Description of MFA',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
-      mockItems.forEach(item => mockService.savePolicyItem(item));
-      items = mockService.getPolicyItems();
-    }
-    
-    setItems(items);
-    setPolicies(policies);
-    setFrameworks(mockService.getFrameworks());
-    setStandards(mockService.getStandards());
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      const [itemRows, policyRows, frameworkRows, standardRows] = await Promise.all([
+        policyItemsApi.getPolicyItems(),
+        policiesApi.getPolicies(),
+        frameworksApi.getFrameworks(),
+        policyItemsApi.getStandards(),
+      ]);
+      setItems(itemRows);
+      setPolicies(policyRows);
+      setFrameworks(frameworkRows);
+      setStandards(standardRows);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load policy items');
+    }
+  };
 
   const handleDelete = (id: string) => {
     const itemStandards = standards.filter(s => getStandardItemIds(s).includes(id));
@@ -161,13 +134,17 @@ export default function PolicyItemsPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deletePolicyItem(idToDelete);
-      setItems(mockService.getPolicyItems());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      toast.success(t('policy_item_deleted_success'));
+      try {
+        await policyItemsApi.deletePolicyItem(idToDelete);
+        await loadData();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('policy_item_deleted_success'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Policy item could not be deleted');
+      }
     }
   };
 
@@ -318,7 +295,7 @@ export default function PolicyItemsPage() {
   const { page, setPage, pageSize, setPageSize, paginate } = usePagination(totalForPagination);
   const pagedItems = viewMode === 'accordion' ? paginate(sortedRootItems) : paginate(sortedItems);
 
-  const handleQuickSave = () => {
+  const handleQuickSave = async () => {
     if (!quickAddData.nameAr || !quickAddData.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -337,10 +314,14 @@ export default function PolicyItemsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.savePolicyItem(newItem);
-    setItems(mockService.getPolicyItems());
-    setIsQuickAddOpen(false);
-    toast.success(t('policy_item_added_success'));
+    try {
+      await policyItemsApi.createPolicyItem(newItem);
+      await loadData();
+      setIsQuickAddOpen(false);
+      toast.success(t('policy_item_added_success'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Policy item could not be saved');
+    }
   };
 
   return (
@@ -377,7 +358,7 @@ export default function PolicyItemsPage() {
               {isRtl ? 'أكورديون' : 'Accordion'}
             </button>
           </div>
-          <PolicyItemsImport onDone={() => { setItems(mockService.getPolicyItems()); setStandards(mockService.getStandards()); }} />
+          <PolicyItemsImport onDone={loadData} />
           <ExportMenu
             title={isRtl ? 'البنود' : 'Policy Items'}
             filename="policy_items"
@@ -810,28 +791,34 @@ export default function PolicyItemsPage() {
             <Button variant="ghost" onClick={() => setLinkDialogItem(null)}>{t('cancel')}</Button>
             <Button
               className="bg-violet-600 hover:bg-violet-700 text-white font-bold"
-              onClick={() => {
+              onClick={async () => {
                 if (!linkDialogItem) return;
                 const item = linkDialogItem;
                 const policyStandards = standards.filter(s => s.policyId === item.policyId);
                 let updated = 0;
+                const updates: Promise<Standard>[] = [];
                 policyStandards.forEach(s => {
                   const shouldBeLinked = linkSelected.has(s.id);
                   const currentIds = getStandardItemIds(s);
                   const isCurrentlyLinkedHere = currentIds.includes(item.id);
                   if (shouldBeLinked && !isCurrentlyLinkedHere) {
                     const nextIds = [...currentIds, item.id];
-                    mockService.saveStandard({ ...s, policyItemId: undefined, policyItemIds: nextIds, updatedAt: new Date().toISOString() });
+                    updates.push(policyItemsApi.updateStandardPolicyItemIds(s.id, nextIds));
                     updated++;
                   } else if (!shouldBeLinked && isCurrentlyLinkedHere) {
                     const nextIds = currentIds.filter(id => id !== item.id);
-                    mockService.saveStandard({ ...s, policyItemId: undefined, policyItemIds: nextIds, updatedAt: new Date().toISOString() });
+                    updates.push(policyItemsApi.updateStandardPolicyItemIds(s.id, nextIds));
                     updated++;
                   }
                 });
-                setStandards(mockService.getStandards());
-                toast.success(isRtl ? `تم تحديث ${updated} معيار` : `${updated} standard(s) updated`);
-                setLinkDialogItem(null);
+                try {
+                  await Promise.all(updates);
+                  await loadData();
+                  toast.success(isRtl ? `�� ����� ${updated} �����` : `${updated} standard(s) updated`);
+                  setLinkDialogItem(null);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'Standard links could not be saved');
+                }
               }}
             >
               <Check className="w-4 h-4 mr-2" />
@@ -907,7 +894,7 @@ export default function PolicyItemsPage() {
         open={itemDialogOpen}
         itemId={editingItemId}
         parentId={itemParentId}
-        onSaved={() => { setItems(mockService.getPolicyItems()); setStandards(mockService.getStandards()); }}
+        onSaved={loadData}
         onClose={() => setItemDialogOpen(false)}
       />
     </div>

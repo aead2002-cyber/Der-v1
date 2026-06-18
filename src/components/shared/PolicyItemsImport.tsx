@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Upload, Download, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { mockService } from '@/services/mockService';
 import { PolicyItem, Policy } from '@/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
 
 interface Props {
-  onDone?: () => void;
+  onDone?: () => void | Promise<void>;
 }
 
 const newId = () => Math.random().toString(36).slice(2, 11);
@@ -29,9 +30,18 @@ export function PolicyItemsImport({ onDone }: Props) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [busy]);
 
-  const downloadTemplate = () => {
-    const policies = mockService.getPolicies();
-    const items = mockService.getPolicyItems();
+  const downloadTemplate = async () => {
+    let policies: Policy[] = [];
+    let items: PolicyItem[] = [];
+    try {
+      [policies, items] = await Promise.all([
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load template data');
+      return;
+    }
 
     const headers = [
       'nameAr', 'nameEn',
@@ -85,8 +95,10 @@ export function PolicyItemsImport({ onDone }: Props) {
       const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
       setProgress({ phase: isRtl ? 'التحقق من البيانات...' : 'Validating rows...', current: 0, total: rows.length });
 
-      const policies: Policy[] = mockService.getPolicies();
-      const existingItems: PolicyItem[] = mockService.getPolicyItems();
+      const [policies, existingItems]: [Policy[], PolicyItem[]] = await Promise.all([
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+      ]);
 
       const findPolicy = (ar: string, en: string) => {
         const a = String(ar || '').trim();
@@ -154,7 +166,7 @@ export function PolicyItemsImport({ onDone }: Props) {
       }
 
       setProgress({ phase: isRtl ? 'حفظ في الخادم...' : 'Saving to server...', current: newItems.length, total: newItems.length });
-      mockService.bulkSavePolicyItems(newItems);
+      await Promise.all(newItems.map(item => policyItemsApi.createPolicyItem(item)));
       const inserted = newItems.length;
       if (errors.length > 0) {
         toast.success(isRtl
@@ -164,7 +176,7 @@ export function PolicyItemsImport({ onDone }: Props) {
       } else {
         toast.success(isRtl ? `تم استيراد ${inserted} بند بنجاح` : `Imported ${inserted} items successfully`);
       }
-      onDone?.();
+      await onDone?.();
     } catch (err: any) {
       console.error(err);
       toast.error(isRtl ? `فشل قراءة الملف: ${err?.message || ''}` : `Could not read file: ${err?.message || ''}`);

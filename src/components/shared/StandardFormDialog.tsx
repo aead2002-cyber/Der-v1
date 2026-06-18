@@ -11,16 +11,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
 import { Standard, Policy, StandardClassification, PolicyItem } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AttachmentsField } from './AttachmentsField';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
+import { standardClassificationsApi } from '@/services/standardClassificationsApi';
 
 interface Props {
   open: boolean;
   standardId: string | null; // null = new
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -45,39 +48,62 @@ export function StandardFormDialog({ open, standardId, onSaved, onClose }: Props
   const [classifications, setClassifications] = useState<StandardClassification[]>([]);
   const [items, setItems] = useState<PolicyItem[]>([]);
   const [formData, setFormData] = useState(emptyForm);
+  const [existingCreatedAt, setExistingCreatedAt] = useState<any>(null);
 
   useEffect(() => {
     if (!open) return;
-    setPolicies(mockService.getPolicies());
-    setClassifications(mockService.getStandardClassifications());
+    const loadData = async () => {
+      try {
+        const [policyRows, classificationRows, standardRows] = await Promise.all([
+          policiesApi.getPolicies(),
+          standardClassificationsApi.getStandardClassifications(),
+          standardsApi.getStandards(),
+        ]);
+        setPolicies(policyRows);
+        setClassifications(classificationRows);
 
-    if (standardId) {
-      const existing = mockService.getStandards().find(s => s.id === standardId);
-      if (existing) {
-        setFormData({
-          nameAr: existing.nameAr,
-          nameEn: existing.nameEn,
-          descriptionAr: existing.descriptionAr,
-          descriptionEn: existing.descriptionEn,
-          policyId: existing.policyId,
-          policyItemId: existing.policyItemId || '',
-          classifications: existing.classifications || [],
-          attachments: existing.attachments || [],
-          potentialRisksAr: (existing as any).potentialRisksAr || '',
-          potentialRisksEn: (existing as any).potentialRisksEn || '',
-        });
+        if (standardId) {
+          const existing = standardRows.find(s => s.id === standardId);
+          if (existing) {
+            const linkedItemIds = existing.policyItemIds?.length ? existing.policyItemIds : existing.policyItemId ? [existing.policyItemId] : [];
+            setExistingCreatedAt(existing.createdAt);
+            setFormData({
+              nameAr: existing.nameAr,
+              nameEn: existing.nameEn,
+              descriptionAr: existing.descriptionAr,
+              descriptionEn: existing.descriptionEn,
+              policyId: existing.policyId,
+              policyItemId: linkedItemIds[0] || '',
+              classifications: existing.classifications || [],
+              attachments: existing.attachments || [],
+              potentialRisksAr: (existing as any).potentialRisksAr || '',
+              potentialRisksEn: (existing as any).potentialRisksEn || '',
+            });
+          }
+        } else {
+          setExistingCreatedAt(null);
+          setFormData(emptyForm);
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load standard');
       }
-    } else {
-      setFormData(emptyForm);
-    }
+    };
+    loadData();
   }, [open, standardId]);
 
   useEffect(() => {
-    if (formData.policyId) {
-      setItems(mockService.getPolicyItems(formData.policyId));
-    } else {
-      setItems([]);
-    }
+    const loadItems = async () => {
+      if (formData.policyId) {
+        try {
+          setItems(await policyItemsApi.getPolicyItems(formData.policyId));
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Failed to load policy items');
+        }
+      } else {
+        setItems([]);
+      }
+    };
+    loadItems();
   }, [formData.policyId]);
 
   const toggleClassification = (classId: string) => {
@@ -89,22 +115,31 @@ export function StandardFormDialog({ open, standardId, onSaved, onClose }: Props
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.nameAr || !formData.nameEn || !formData.policyId) {
       toast.error(t('fill_required_fields'));
       return;
     }
-    const existing = standardId ? mockService.getStandards().find(s => s.id === standardId) : null;
     const standard: Standard = {
       id: standardId || Math.random().toString(36).substr(2, 9),
       ...formData,
-      createdAt: existing?.createdAt || new Date().toISOString(),
+      policyItemId: formData.policyItemId || undefined,
+      policyItemIds: formData.policyItemId ? [formData.policyItemId] : [],
+      createdAt: existingCreatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    mockService.saveStandard(standard);
-    toast.success(standardId ? t('standard_updated_success') : t('standard_added_success'));
-    onSaved();
-    onClose();
+    try {
+      if (standardId) {
+        await standardsApi.updateStandard(standardId, standard);
+      } else {
+        await standardsApi.createStandard(standard);
+      }
+      toast.success(standardId ? t('standard_updated_success') : t('standard_added_success'));
+      await onSaved();
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Standard could not be saved');
+    }
   };
 
   return (

@@ -3,13 +3,16 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Upload, Download, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { mockService } from '@/services/mockService';
 import { Standard, Policy, PolicyItem, StandardClassification } from '@/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
+import { standardClassificationsApi } from '@/services/standardClassificationsApi';
 
 interface Props {
-  onDone?: () => void;
+  onDone?: () => void | Promise<void>;
 }
 
 const newId = () => Math.random().toString(36).slice(2, 11);
@@ -29,10 +32,20 @@ export function StandardsImport({ onDone }: Props) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [busy]);
 
-  const downloadTemplate = () => {
-    const policies = mockService.getPolicies();
-    const items = mockService.getPolicyItems();
-    const classifications = mockService.getStandardClassifications();
+  const downloadTemplate = async () => {
+    let policies: Policy[] = [];
+    let items: PolicyItem[] = [];
+    let classifications: StandardClassification[] = [];
+    try {
+      [policies, items, classifications] = await Promise.all([
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+        standardClassificationsApi.getStandardClassifications(),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load template data');
+      return;
+    }
 
     const headers = [
       'nameAr', 'nameEn',
@@ -90,9 +103,11 @@ export function StandardsImport({ onDone }: Props) {
       const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
       setProgress({ phase: isRtl ? 'التحقق من البيانات...' : 'Validating rows...', current: 0, total: rows.length });
 
-      const policies: Policy[] = mockService.getPolicies();
-      const items: PolicyItem[] = mockService.getPolicyItems();
-      const classifications: StandardClassification[] = mockService.getStandardClassifications();
+      const [policies, items, classifications]: [Policy[], PolicyItem[], StandardClassification[]] = await Promise.all([
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+        standardClassificationsApi.getStandardClassifications(),
+      ]);
 
       const findPolicy = (ar: string, en: string) => {
         const a = String(ar || '').trim();
@@ -174,7 +189,7 @@ export function StandardsImport({ onDone }: Props) {
       }
 
       setProgress({ phase: isRtl ? 'حفظ في الخادم...' : 'Saving to server...', current: newStandards.length, total: newStandards.length });
-      mockService.bulkSaveStandards(newStandards);
+      await Promise.all(newStandards.map(standard => standardsApi.createStandard(standard)));
       const inserted = newStandards.length;
       if (errors.length > 0) {
         toast.success(isRtl
@@ -184,7 +199,7 @@ export function StandardsImport({ onDone }: Props) {
       } else {
         toast.success(isRtl ? `تم استيراد ${inserted} معيار بنجاح` : `Imported ${inserted} standards successfully`);
       }
-      onDone?.();
+      await onDone?.();
     } catch (err: any) {
       console.error(err);
       toast.error(isRtl ? `فشل قراءة الملف: ${err?.message || ''}` : `Could not read file: ${err?.message || ''}`);

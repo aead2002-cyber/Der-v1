@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/AuthContext';
+import { policiesApi } from '@/services/policiesApi';
+import { frameworksApi } from '@/services/frameworksApi';
 
 export default function PoliciesPage() {
   const { t, i18n } = useTranslation();
@@ -62,11 +64,23 @@ export default function PoliciesPage() {
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
-    setPolicies(mockService.getPolicies());
-    setFrameworks(mockService.getFrameworks());
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [policyRows, frameworkRows] = await Promise.all([
+        policiesApi.getPolicies(),
+        frameworksApi.getFrameworks(),
+      ]);
+      setPolicies(policyRows);
+      setFrameworks(frameworkRows);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load policies');
+    }
     setStandards(mockService.getStandards());
     setProcedures(mockService.getProcedures());
-  }, []);
+  };
 
   const openEditPolicy = (policy: Policy) => {
     setEditingPolicyId(policy.id);
@@ -86,7 +100,7 @@ export default function PoliciesPage() {
     setNewPolicy({ frameworkId: 'nca' });
   };
 
-  const handleAddPolicy = () => {
+  const handleAddPolicy = async () => {
     if (!newPolicy.nameAr || !newPolicy.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -104,10 +118,18 @@ export default function PoliciesPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.savePolicy(policy);
-    setPolicies(mockService.getPolicies());
-    closePolicyDialog();
-    toast.success(existing ? t('policy_updated_success') || t('policy_added_success') : t('policy_added_success'));
+    try {
+      if (existing) {
+        await policiesApi.updatePolicy(existing.id, policy);
+      } else {
+        await policiesApi.createPolicy(policy);
+      }
+      await loadData();
+      closePolicyDialog();
+      toast.success(existing ? t('policy_updated_success') || t('policy_added_success') : t('policy_added_success'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Policy could not be saved');
+    }
   };
 
   const handleAddItem = () => {
@@ -155,13 +177,17 @@ export default function PoliciesPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (idToDelete) {
-      mockService.deletePolicy(idToDelete);
-      setPolicies(mockService.getPolicies());
-      setIsDeleteConfirmOpen(false);
-      setIdToDelete(null);
-      toast.success(t('policy_deleted_success'));
+      try {
+        await policiesApi.deletePolicy(idToDelete);
+        await loadData();
+        setIsDeleteConfirmOpen(false);
+        setIdToDelete(null);
+        toast.success(t('policy_deleted_success'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Policy could not be deleted');
+      }
     }
   };
 
@@ -204,12 +230,22 @@ export default function PoliciesPage() {
           }
         });
 
-        if (newPolicies.length > 0) {
-          mockService.bulkSavePolicies(newPolicies);
+        if (newPolicies.length === 0) {
+          toast.success(`${t('import_success')}: 0`);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
         }
-        setPolicies(mockService.getPolicies());
-        toast.success(`${t('import_success')}: ${newPolicies.length}`);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+
+        Promise.all(newPolicies.map(policy => policiesApi.createPolicy(policy)))
+          .then(async () => {
+            await loadData();
+            toast.success(`${t('import_success')}: ${newPolicies.length}`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          })
+          .catch((error) => {
+            toast.error(error instanceof Error ? error.message : t('import_error'));
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          });
       },
       error: (error) => {
         console.error('CSV Parse Error:', error);

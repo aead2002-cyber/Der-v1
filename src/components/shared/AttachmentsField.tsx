@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Paperclip, Plus, X, Clock, Eye } from 'lucide-react';
-import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { filesApi, resolveFileUrl } from '@/services/filesApi';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -24,17 +24,16 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
     setUploading(true);
     const next: string[] = [...value];
     for (const file of Array.from(files)) {
-      const uploaded = await uploadFile(file);
-      if (uploaded) {
+      try {
+        const uploaded = await filesApi.uploadFile(file);
         next.push(uploaded.url);
-      } else {
-        toast.error(isRtl ? `ŸÅÿ¥ŸÑ ÿ±ŸÅÿπ: ${file.name}` : `Upload failed: ${file.name}`);
+      } catch {
+        toast.error(isRtl ? `›‘· —›⁄: ${file.name}` : `Upload failed: ${file.name}`);
       }
     }
     setUploading(false);
     onChange(next);
   };
-
   const labelOf = (val: string) => {
     if (!val) return '';
     if (val.startsWith('/uploads/') || /^https?:\/\//i.test(val)) {
@@ -45,8 +44,10 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
   };
 
   const open = (val: string) => {
-    const url = resolveAttachmentUrl(val) || val;
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    const url = resolveFileUrl(val) || val;
+    if (url) {
+      filesApi.openFile(val).catch(() => toast.error(isRtl ? ' ⁄–— › Õ «·„—›ﬁ' : 'Could not open attachment'));
+    }
   };
 
   return (
@@ -105,3 +106,5 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
     </div>
   );
 }
+
+

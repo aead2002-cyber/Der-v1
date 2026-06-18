@@ -11,17 +11,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
 import { PolicyItem, Policy } from '@/types';
 import { toast } from 'sonner';
 import { AttachmentsField } from './AttachmentsField';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
 
 interface Props {
   open: boolean;
   itemId: string | null;
   parentId?: string;
   defaultPolicyId?: string;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -46,19 +47,29 @@ export function PolicyItemFormDialog({ open, itemId, parentId, defaultPolicyId, 
 
   useEffect(() => {
     if (!open) return;
-    setPolicies(mockService.getPolicies());
-    const items = mockService.getPolicyItems();
-    setAllItems(items);
+    const loadData = async () => {
+      try {
+        const [policyRows, itemRows] = await Promise.all([
+          policiesApi.getPolicies(),
+          policyItemsApi.getPolicyItems(),
+        ]);
+        setPolicies(policyRows);
+        setAllItems(itemRows);
 
-    if (itemId) {
-      const existing = items.find(i => i.id === itemId);
-      if (existing) setFormData(existing);
-    } else if (parentId) {
-      const parent = items.find(i => i.id === parentId);
-      setFormData({ ...empty, parentId, policyId: parent?.policyId || defaultPolicyId || '' });
-    } else {
-      setFormData({ ...empty, policyId: defaultPolicyId || '' });
-    }
+        if (itemId) {
+          const existing = itemRows.find(i => i.id === itemId);
+          if (existing) setFormData(existing);
+        } else if (parentId) {
+          const parent = itemRows.find(i => i.id === parentId);
+          setFormData({ ...empty, parentId, policyId: parent?.policyId || defaultPolicyId || '' });
+        } else {
+          setFormData({ ...empty, policyId: defaultPolicyId || '' });
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load policy item');
+      }
+    };
+    loadData();
   }, [open, itemId, parentId, defaultPolicyId]);
 
   const isDescendant = (checkId: string, ancestorId: string, items: PolicyItem[]): boolean => {
@@ -74,7 +85,7 @@ export function PolicyItemFormDialog({ open, itemId, parentId, defaultPolicyId, 
     (!itemId || !isDescendant(i.id, itemId, allItems))
   );
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.nameAr || !formData.nameEn || !formData.policyId) {
       toast.error(t('please_fill_all_fields') || t('fill_required_fields'));
       return;
@@ -94,10 +105,18 @@ export function PolicyItemFormDialog({ open, itemId, parentId, defaultPolicyId, 
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.savePolicyItem(itemData);
-    toast.success(itemId ? t('policy_item_updated_success') : t('policy_item_added_success'));
-    onSaved();
-    onClose();
+    try {
+      if (itemId) {
+        await policyItemsApi.updatePolicyItem(itemId, itemData);
+      } else {
+        await policyItemsApi.createPolicyItem(itemData);
+      }
+      toast.success(itemId ? t('policy_item_updated_success') : t('policy_item_added_success'));
+      await onSaved();
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Policy item could not be saved');
+    }
   };
 
   return (
