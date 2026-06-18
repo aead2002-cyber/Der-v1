@@ -13,7 +13,7 @@ export interface PermissionAction {
   labelAr: string;
   labelEn: string;
 }
-
+//TEST//
 export interface PermissionScreen {
   /** Screen identifier — also used as the row label in the editor. */
   id: string;
