@@ -46,7 +46,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/AuthContext';
-import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { notificationsApi } from '@/services/notificationsApi';
 import { PasswordRulesList, isPasswordValid } from './shared/PasswordRules';
 import { Notification } from '@/types';
 
@@ -144,29 +145,48 @@ export default function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     if (user) {
-      const updateNotifications = () => {
-        const all = mockService.getNotifications(user.uid);
-        setNotifications(all);
-        setUnreadCount(all.filter(n => !n.isRead).length);
+      const updateNotifications = async () => {
+        try {
+          const all = await notificationsApi.getNotifications();
+          const mine = all.filter(n => n.userId === user.uid);
+          setNotifications(mine);
+          setUnreadCount(mine.filter(n => !n.isRead).length);
+        } catch (error) {
+          console.error('Failed to load notifications', error);
+        }
       };
       
-      updateNotifications();
-      const interval = setInterval(updateNotifications, 5000); // Poll every 5 seconds for simulation
+      void updateNotifications();
+      const interval = setInterval(() => {
+        void updateNotifications();
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [user]);
 
-  const handleMarkAsRead = (id: string) => {
-    mockService.markNotificationAsRead(id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  const handleMarkAsRead = async (id: string) => {
+    const target = notifications.find(n => n.id === id);
+    if (!target || target.isRead) return;
+
+    try {
+      await notificationsApi.updateNotification(id, { isRead: true });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to mark notification as read', error);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     if (user) {
-      mockService.markAllNotificationsAsRead(user.uid);
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      setUnreadCount(0);
+      const unread = notifications.filter(n => !n.isRead);
+      try {
+        await Promise.all(unread.map(n => notificationsApi.updateNotification(n.id, { isRead: true })));
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      } catch (error) {
+        console.error('Failed to mark all notifications as read', error);
+      }
     }
   };
 

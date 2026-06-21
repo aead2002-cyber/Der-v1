@@ -12,13 +12,44 @@ interface WriteResponse {
   error?: string;
 }
 
+interface DeleteResponse {
+  success?: boolean;
+  error?: string;
+}
+
 export const notificationsApi = {
+  getNotifications: async (): Promise<Notification[]> => {
+    const response = await apiRequest<unknown>('/api/notifications');
+    return Array.isArray(response) ? response.map(normalizeNotification) : [];
+  },
+
   createNotification: async (notification: NotificationPayload): Promise<Notification> => {
     const response = await apiRequest<unknown>('/api/notifications', {
       method: 'POST',
       body: notification,
     });
     return unwrapNotification(response);
+  },
+
+  updateNotification: async (id: string, notification: Partial<NotificationPayload>): Promise<Notification> => {
+    const response = await apiRequest<unknown>(`/api/notifications/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: notification,
+    });
+    return unwrapNotification(response);
+  },
+
+  deleteNotification: async (id: string): Promise<void> => {
+    const response = await apiRequest<unknown>(`/api/notifications/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+
+    if (response && typeof response === 'object') {
+      const result = response as DeleteResponse;
+      if (result.success === false) {
+        throw new Error(result.error || 'Notification could not be deleted');
+      }
+    }
   },
 };
 

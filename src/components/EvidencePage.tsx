@@ -28,6 +28,7 @@ import { mockService } from '@/services/mockService';
 import { evidenceApi } from '@/services/evidenceApi';
 import { filesApi, isBackendFileUrl, resolveFileUrl } from '@/services/filesApi';
 import { proceduresApi } from '@/services/proceduresApi';
+import { usersApi } from '@/services/usersApi';
 import { Procedure, Evidence, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -57,14 +58,15 @@ export default function EvidencePage() {
   });
 
   const loadData = React.useCallback(async () => {
-    setUsers(mockService.getUsers());
     if (!id) return;
 
     try {
-      const [procedures, evidenceRows] = await Promise.all([
+      const [procedures, evidenceRows, userRows] = await Promise.all([
         proceduresApi.getProcedures(),
         evidenceApi.getEvidence(id),
+        usersApi.getUsers(),
       ]);
+      setUsers(userRows);
       const proc = procedures.find(p => p.id === id);
       if (proc) {
         setProcedure(proc);

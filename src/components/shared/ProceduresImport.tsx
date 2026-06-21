@@ -7,6 +7,7 @@ import { mockService } from '@/services/mockService';
 import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
+import { usersApi } from '@/services/usersApi';
 import { Procedure, Policy, Standard, User } from '@/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -73,7 +74,7 @@ export function ProceduresImport({ onDone }: Props) {
       policiesApi.getPolicies(),
       standardsApi.getStandards(),
     ]);
-    const users = mockService.getUsers();
+    const users = await usersApi.getUsers();
 
     // Sheet 1: instructions + headers + sample row
     const headers = [
@@ -139,11 +140,12 @@ export function ProceduresImport({ onDone }: Props) {
       const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
       setProgress({ phase: isRtl ? 'التحقق من البيانات...' : 'Validating rows...', current: 0, total: rows.length });
 
-      const [policies, standards] = await Promise.all([
+      const [policies, standards, users] = await Promise.all([
         policiesApi.getPolicies(),
         standardsApi.getStandards(),
+        usersApi.getUsers(),
       ]);
-      const users: User[] = mockService.getUsers();
+      const typedUsers: User[] = users;
 
       const findPolicy = (ar: string, en: string): Policy | undefined => {
         const a = String(ar || '').trim();
@@ -163,7 +165,7 @@ export function ProceduresImport({ onDone }: Props) {
       };
       const findUserUid = (email: string): string | null => {
         const e = String(email || '').trim().toLowerCase();
-        const u = users.find(x => (x.email || '').toLowerCase() === e);
+        const u = typedUsers.find(x => (x.email || '').toLowerCase() === e);
         return u ? u.uid : null;
       };
 

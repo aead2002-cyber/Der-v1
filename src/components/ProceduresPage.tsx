@@ -45,6 +45,7 @@ import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
 import { frameworksApi } from '@/services/frameworksApi';
+import { usersApi } from '@/services/usersApi';
 import { ExportMenu } from './shared/ExportMenu';
 import { ProceduresImport } from './shared/ProceduresImport';
 import { ProcedureFormDialog } from './shared/ProcedureFormDialog';
@@ -88,21 +89,22 @@ export default function ProceduresPage() {
 
   const loadData = React.useCallback(async () => {
     try {
-      const [procedureRows, policyRows, standardRows, frameworkRows] = await Promise.all([
+      const [procedureRows, policyRows, standardRows, frameworkRows, userRows] = await Promise.all([
         proceduresApi.getProcedures(),
         policiesApi.getPolicies(),
         standardsApi.getStandards(),
         frameworksApi.getFrameworks(),
+        usersApi.getUsers(),
       ]);
       setProcedures(procedureRows);
       setPolicies(policyRows);
       setStandards(standardRows);
       setFrameworks(frameworkRows);
+      setUsers(userRows);
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Could not load procedures');
     }
-    setUsers(mockService.getUsers());
   }, []);
 
   useEffect(() => {

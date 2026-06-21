@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockService } from '../services/mockService';
-import { NotificationLog, User } from '../types';
+import { notificationsApi } from '@/services/notificationsApi';
+import { usersApi } from '@/services/usersApi';
+import { Notification, User } from '../types';
 import {
   Table,
   TableBody,
@@ -20,16 +21,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, Search, Filter, RefreshCcw, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Bell, Search, Filter, RefreshCcw, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function NotificationsPage() {
   const { t, i18n } = useTranslation();
-  const [logs, setLogs] = useState<NotificationLog[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<NotificationLog[]>([]);
-  
-  // Filters
+  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -39,71 +39,92 @@ export default function NotificationsPage() {
 
   const isRtl = i18n.language === 'ar';
 
+  const loadData = async () => {
+    try {
+      const [notificationRows, userRows] = await Promise.all([
+        notificationsApi.getNotifications(),
+        usersApi.getUsers(),
+      ]);
+      setNotifications(notificationRows);
+      setUsers(userRows);
+    } catch (error) {
+      console.error('Failed to load notifications', error);
+    }
+  };
+
   useEffect(() => {
-    const data = mockService.getNotificationLogs();
-    setLogs(data);
-    setUsers(mockService.getUsers());
+    void loadData();
   }, []);
 
   useEffect(() => {
-    let result = [...logs];
+    let result = [...notifications];
 
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
-      result = result.filter(log => 
-        log.subject.toLowerCase().includes(lowerSearch) || 
-        log.body.toLowerCase().includes(lowerSearch) ||
-        log.recipientName.toLowerCase().includes(lowerSearch) ||
-        log.recipientEmail.toLowerCase().includes(lowerSearch)
-      );
+      result = result.filter((notification) => {
+        const recipient = users.find(u => u.uid === notification.userId);
+        return (
+          notification.titleAr.toLowerCase().includes(lowerSearch) ||
+          notification.titleEn.toLowerCase().includes(lowerSearch) ||
+          notification.messageAr.toLowerCase().includes(lowerSearch) ||
+          notification.messageEn.toLowerCase().includes(lowerSearch) ||
+          (recipient?.displayName || '').toLowerCase().includes(lowerSearch) ||
+          (recipient?.email || '').toLowerCase().includes(lowerSearch)
+        );
+      });
     }
 
     if (typeFilter !== 'all') {
-      result = result.filter(log => log.type === typeFilter);
+      result = result.filter(notification => notification.type === typeFilter);
     }
 
     if (statusFilter !== 'all') {
-      result = result.filter(log => log.status === statusFilter);
+      result = result.filter(notification => {
+        if (statusFilter === 'read') return notification.isRead;
+        if (statusFilter === 'unread') return !notification.isRead;
+        return true;
+      });
     }
 
     if (userFilter !== 'all') {
-      result = result.filter(log => log.recipientId === userFilter);
+      result = result.filter(notification => notification.userId === userFilter);
     }
 
     if (dateFrom) {
-      result = result.filter(log => new Date(log.sentAt) >= new Date(dateFrom));
+      result = result.filter(notification => new Date(notification.createdAt) >= new Date(dateFrom));
     }
 
     if (dateTo) {
       const endOfDay = new Date(dateTo);
       endOfDay.setHours(23, 59, 59, 999);
-      result = result.filter(log => new Date(log.sentAt) <= endOfDay);
+      result = result.filter(notification => new Date(notification.createdAt) <= endOfDay);
     }
 
-    setFilteredLogs(result);
-  }, [logs, searchTerm, typeFilter, statusFilter, userFilter, dateFrom, dateTo]);
+    setFilteredNotifications(result);
+  }, [notifications, users, searchTerm, typeFilter, statusFilter, userFilter, dateFrom, dateTo]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'sent':
-        return <Badge className="bg-emerald-500 hover:bg-emerald-600 gap-1"><CheckCircle2 className="w-3 h-3" /> {isRtl ? 'تم الإرسال' : 'Sent'}</Badge>;
-      case 'failed':
-        return <Badge variant="destructive" className="gap-1"><AlertCircle className="w-3 h-3" /> {isRtl ? 'فشل' : 'Failed'}</Badge>;
-      case 'pending':
-        return <Badge variant="secondary" className="gap-1 bg-amber-500 text-white hover:bg-amber-600"><Clock className="w-3 h-3" /> {isRtl ? 'قيد الانتظار' : 'Pending'}</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+  const getStatusBadge = (isRead: boolean) => {
+    if (isRead) {
+      return <Badge className="bg-emerald-500 hover:bg-emerald-600 gap-1"><CheckCircle2 className="w-3 h-3" /> {isRtl ? 'مقروء' : 'Read'}</Badge>;
     }
+
+    return <Badge variant="secondary" className="gap-1 bg-amber-500 text-white hover:bg-amber-600"><Clock className="w-3 h-3" /> {isRtl ? 'غير مقروء' : 'Unread'}</Badge>;
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'assignment':
-        return isRtl ? 'تكليف بمهمة' : 'Assignment';
+      case 'procedure_assignment':
+        return isRtl ? 'إسناد إجراء' : 'Procedure Assignment';
+      case 'incident_assignment':
+        return isRtl ? 'إسناد بلاغ' : 'Incident Assignment';
       case 'expiry_reminder':
         return isRtl ? 'تذكير بانتهاء الصلاحية' : 'Expiry Reminder';
       case 'overdue_alert':
         return isRtl ? 'تنبيه تأخير' : 'Overdue Alert';
+      case 'general':
+        return isRtl ? 'عام' : 'General';
+      case 'security':
+        return isRtl ? 'أمني' : 'Security';
       default:
         return type;
     }
@@ -127,12 +148,12 @@ export default function NotificationsPage() {
             {isRtl ? 'متابعة الإشعارات' : 'Notifications Monitoring'}
           </h2>
           <p className="text-[#64748b] mt-1">
-            {isRtl ? 'مراقبة وتتبع جميع الإشعارات المرسلة من النظام' : 'Monitor and track all notifications sent by the system'}
+            {isRtl ? 'مراقبة وتتبع جميع الإشعارات المسجلة في النظام' : 'Monitor and track all notifications recorded in the system'}
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => setLogs(mockService.getNotificationLogs())}
+        <Button
+          variant="outline"
+          onClick={() => { void loadData(); }}
           className="gap-2"
         >
           <RefreshCcw className="w-4 h-4" />
@@ -154,7 +175,7 @@ export default function NotificationsPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-3" />
                 <Input
-                  placeholder={isRtl ? 'ابحث في الموضوع أو النص...' : 'Search in subject or body...'}
+                  placeholder={isRtl ? 'ابحث في العنوان أو النص...' : 'Search in title or message...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 rtl:pl-3 rtl:pr-9"
@@ -166,23 +187,16 @@ export default function NotificationsPage() {
               <label className="text-sm font-medium">{isRtl ? 'نوع الإشعار' : 'Notification Type'}</label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? 'الكل' : 'All'}>
-                    {(() => {
-                      const labels: Record<string, { ar: string; en: string }> = {
-                        all: { ar: 'الكل', en: 'All' },
-                        assignment: { ar: 'تكليف بمهمة', en: 'Assignment' },
-                        expiry_reminder: { ar: 'تذكير بانتهاء الصلاحية', en: 'Expiry Reminder' },
-                        overdue_alert: { ar: 'تنبيه تأخير', en: 'Overdue Alert' }
-                      };
-                      return labels[typeFilter] ? (isRtl ? labels[typeFilter].ar : labels[typeFilter].en) : typeFilter;
-                    })()}
-                  </SelectValue>
+                  <SelectValue placeholder={isRtl ? 'الكل' : 'All'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{isRtl ? 'الكل' : 'All'}</SelectItem>
-                  <SelectItem value="assignment">{isRtl ? 'تكليف بمهمة' : 'Assignment'}</SelectItem>
+                  <SelectItem value="procedure_assignment">{isRtl ? 'إسناد إجراء' : 'Procedure Assignment'}</SelectItem>
+                  <SelectItem value="incident_assignment">{isRtl ? 'إسناد بلاغ' : 'Incident Assignment'}</SelectItem>
                   <SelectItem value="expiry_reminder">{isRtl ? 'تذكير بانتهاء الصلاحية' : 'Expiry Reminder'}</SelectItem>
                   <SelectItem value="overdue_alert">{isRtl ? 'تنبيه تأخير' : 'Overdue Alert'}</SelectItem>
+                  <SelectItem value="general">{isRtl ? 'عام' : 'General'}</SelectItem>
+                  <SelectItem value="security">{isRtl ? 'أمني' : 'Security'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -191,23 +205,12 @@ export default function NotificationsPage() {
               <label className="text-sm font-medium">{isRtl ? 'الحالة' : 'Status'}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? 'الكل' : 'All'}>
-                    {(() => {
-                      const labels: Record<string, { ar: string; en: string }> = {
-                        all: { ar: 'الكل', en: 'All' },
-                        sent: { ar: 'تم الإرسال', en: 'Sent' },
-                        failed: { ar: 'فشل', en: 'Failed' },
-                        pending: { ar: 'قيد الانتظار', en: 'Pending' }
-                      };
-                      return labels[statusFilter] ? (isRtl ? labels[statusFilter].ar : labels[statusFilter].en) : statusFilter;
-                    })()}
-                  </SelectValue>
+                  <SelectValue placeholder={isRtl ? 'الكل' : 'All'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{isRtl ? 'الكل' : 'All'}</SelectItem>
-                  <SelectItem value="sent">{isRtl ? 'تم الإرسال' : 'Sent'}</SelectItem>
-                  <SelectItem value="failed">{isRtl ? 'فشل' : 'Failed'}</SelectItem>
-                  <SelectItem value="pending">{isRtl ? 'قيد الانتظار' : 'Pending'}</SelectItem>
+                  <SelectItem value="read">{isRtl ? 'مقروء' : 'Read'}</SelectItem>
+                  <SelectItem value="unread">{isRtl ? 'غير مقروء' : 'Unread'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -216,11 +219,7 @@ export default function NotificationsPage() {
               <label className="text-sm font-medium">{isRtl ? 'المستلم' : 'Recipient'}</label>
               <Select value={userFilter} onValueChange={setUserFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? 'الكل' : 'All'}>
-                    {userFilter === 'all'
-                      ? (isRtl ? 'الكل' : 'All')
-                      : (users.find(u => u.uid === userFilter)?.displayName || userFilter)}
-                  </SelectValue>
+                  <SelectValue placeholder={isRtl ? 'الكل' : 'All'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{isRtl ? 'الكل' : 'All'}</SelectItem>
@@ -248,10 +247,10 @@ export default function NotificationsPage() {
                 onChange={(e) => setDateTo(e.target.value)}
               />
             </div>
-            
+
             <div className="lg:col-span-2 flex items-end">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={clearFilters}
                 className="text-[#64748b] hover:text-blue-600"
               >
@@ -269,59 +268,57 @@ export default function NotificationsPage() {
               <TableRow>
                 <TableHead className="font-bold">{isRtl ? 'المستلم' : 'Recipient'}</TableHead>
                 <TableHead className="font-bold">{isRtl ? 'النوع' : 'Type'}</TableHead>
-                <TableHead className="font-bold">{isRtl ? 'الموضوع' : 'Subject'}</TableHead>
+                <TableHead className="font-bold">{isRtl ? 'العنوان' : 'Title'}</TableHead>
                 <TableHead className="font-bold">{isRtl ? 'الحالة' : 'Status'}</TableHead>
-                <TableHead className="font-bold">{isRtl ? 'تاريخ الإرسال' : 'Sent At'}</TableHead>
-                <TableHead className="font-bold">{isRtl ? 'ملاحظات' : 'Notes'}</TableHead>
+                <TableHead className="font-bold">{isRtl ? 'تاريخ الإنشاء' : 'Created At'}</TableHead>
+                <TableHead className="font-bold">{isRtl ? 'الرابط' : 'Link'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLogs.length === 0 ? (
+              {filteredNotifications.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-[#64748b]">
                     {isRtl ? 'لا توجد إشعارات تطابق فلاتر البحث' : 'No notifications match the search filters'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLogs.map((log) => (
-                  <TableRow key={log.id} className="hover:bg-gray-50 transition-colors">
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-[#1e293b]">{log.recipientName}</span>
-                        <span className="text-xs text-[#64748b]">{log.recipientEmail}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{getTypeLabel(log.type)}</span>
-                    </TableCell>
-                    <TableCell className="max-w-[300px]">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-[#1e293b] truncate" title={log.subject}>
-                          {log.subject}
+                filteredNotifications.map((notification) => {
+                  const recipient = users.find(u => u.uid === notification.userId);
+                  return (
+                    <TableRow key={notification.id} className="hover:bg-gray-50 transition-colors">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-[#1e293b]">{recipient?.displayName || notification.userId}</span>
+                          <span className="text-xs text-[#64748b]">{recipient?.email || ''}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{getTypeLabel(notification.type)}</span>
+                      </TableCell>
+                      <TableCell className="max-w-[300px]">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-[#1e293b] truncate" title={isRtl ? notification.titleAr : notification.titleEn}>
+                            {isRtl ? notification.titleAr : notification.titleEn}
+                          </span>
+                          <span className="text-xs text-[#64748b] truncate" title={isRtl ? notification.messageAr : notification.messageEn}>
+                            {isRtl ? notification.messageAr : notification.messageEn}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(notification.isRead)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-[#64748b]">
+                          {new Date(notification.createdAt).toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')}
                         </span>
-                        <span className="text-xs text-[#64748b] truncate" title={log.body}>
-                          {log.body}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(log.status)}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-[#64748b]">
-                        {new Date(log.sentAt).toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {log.errorMessage && (
-                        <span className="text-xs text-rose-600 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {log.errorMessage}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-[#64748b]">{notification.link || '—'}</span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

@@ -15,6 +15,7 @@ import { mockService } from '@/services/mockService';
 import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
+import { usersApi } from '@/services/usersApi';
 import { Procedure, Policy, Standard, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { AttachmentsField } from './AttachmentsField';
@@ -59,15 +60,16 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
     if (!open) return;
     const loadData = async () => {
       try {
-        const [policyRows, standardRows, procedureRows] = await Promise.all([
+        const [policyRows, standardRows, procedureRows, userRows] = await Promise.all([
           policiesApi.getPolicies(),
           standardsApi.getStandards(),
           proceduresApi.getProcedures(),
+          usersApi.getUsers(),
         ]);
         setPolicies(policyRows);
         setStandards(standardRows);
         setAllProcedures(procedureRows);
-        setUsers(mockService.getUsers());
+        setUsers(userRows);
 
         if (procedureId) {
           const existing = procedureRows.find(p => p.id === procedureId);

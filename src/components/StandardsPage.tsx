@@ -63,6 +63,7 @@ import { policiesApi } from '@/services/policiesApi';
 import { policyItemsApi } from '@/services/policyItemsApi';
 import { standardsApi } from '@/services/standardsApi';
 import { standardClassificationsApi } from '@/services/standardClassificationsApi';
+import { usersApi } from '@/services/usersApi';
 
 export default function StandardsPage() {
   const { t, i18n } = useTranslation();
@@ -122,22 +123,23 @@ export default function StandardsPage() {
 
   const loadData = async () => {
     try {
-      const [standardRows, policyRows, itemRows, frameworkRows, classificationRows] = await Promise.all([
+      const [standardRows, policyRows, itemRows, frameworkRows, classificationRows, userRows] = await Promise.all([
         standardsApi.getStandards(),
         policiesApi.getPolicies(),
         policyItemsApi.getPolicyItems(),
         frameworksApi.getFrameworks(),
         standardClassificationsApi.getStandardClassifications(),
+        usersApi.getUsers(),
       ]);
       setStandards(standardRows);
       setPolicies(policyRows);
       setItems(itemRows);
       setFrameworks(frameworkRows);
       setClassifications(classificationRows);
+      setUsers(userRows);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load standards');
     }
-    setUsers(mockService.getUsers());
     setProcedures(mockService.getProcedures());
   };
 
