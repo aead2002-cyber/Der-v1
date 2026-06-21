@@ -80,7 +80,7 @@ export default function LoginPage() {
       tokenStorage.setToken(session.token);
       tokenStorage.setUser(session.user);
       toast.success(isRtl ? 'تم تسجيل الدخول بنجاح' : 'Login successful');
-      window.location.href = '/my-tasks'; // Force reload to update context/layout
+      window.location.href = '/platforms'; // Force reload to update context/layout
     } catch (error) {
       toast.error(error instanceof Error ? error.message : (isRtl ? 'رمز التحقق غير صحيح أو انتهت صلاحيته' : 'Invalid or expired verification code'));
     } finally {

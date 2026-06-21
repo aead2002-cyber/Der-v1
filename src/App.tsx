@@ -30,25 +30,37 @@ import IncidentsPage from './components/IncidentsPage';
 import RisksPage from './components/RisksPage';
 import PublicReportPage from './components/PublicReportPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import PlatformPortalPage from './components/PlatformPortalPage';
+import RasedPlaceholderPage from './components/RasedPlaceholderPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import './i18n';
 
-function ProtectedRoute({ children, permission }: { children: React.ReactNode; permission?: string }) {
+function ProtectedRoute({
+  children,
+  permission,
+  standalone = false,
+}: {
+  children: React.ReactNode;
+  permission?: string;
+  standalone?: boolean;
+}) {
   const { user, loading, can } = useAuth();
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) return <Navigate to="/login" replace />;
 
   if (permission && !can(permission)) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mb-4">
+    const denied = (
+      <div className="flex min-h-screen items-center justify-center bg-[#f8fafc] p-6 text-center">
+        <div>
+          <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mb-4 mx-auto">
             <span className="text-2xl">🔒</span>
           </div>
           <h2 className="text-xl font-bold text-text-main mb-1">ليس لديك صلاحية الوصول</h2>
@@ -56,11 +68,13 @@ function ProtectedRoute({ children, permission }: { children: React.ReactNode; p
             للوصول إلى هذه الصفحة تحتاج صلاحية: <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[12px]">{permission}</code>. تواصل مع مدير النظام.
           </p>
         </div>
-      </Layout>
+      </div>
     );
+
+    return standalone ? denied : <Layout>{denied}</Layout>;
   }
 
-  return <Layout>{children}</Layout>;
+  return standalone ? <>{children}</> : <Layout>{children}</Layout>;
 }
 
 export default function App() {
@@ -71,7 +85,9 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/report-incident" element={<PublicReportPage />} />
-          
+          <Route path="/platforms" element={<ProtectedRoute standalone><PlatformPortalPage /></ProtectedRoute>} />
+          <Route path="/rased" element={<ProtectedRoute standalone><RasedPlaceholderPage /></ProtectedRoute>} />
+
           <Route path="/" element={<ProtectedRoute permission="dashboard.view"><Dashboard /></ProtectedRoute>} />
           <Route path="/policies" element={<ProtectedRoute permission="policies.view"><PoliciesPage /></ProtectedRoute>} />
           <Route path="/policy-items" element={<ProtectedRoute permission="policies.policy_items.view"><PolicyItemsPage /></ProtectedRoute>} />
@@ -96,7 +112,7 @@ export default function App() {
           <Route path="/users/edit/:id" element={<ProtectedRoute permission="users.edit"><AddUserPage /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportsPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute permission="settings.general.view"><SettingsPage /></ProtectedRoute>} />
-          
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster position="top-center" />
@@ -104,4 +120,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
