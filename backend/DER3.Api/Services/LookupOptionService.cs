@@ -8,6 +8,7 @@ namespace DER3.Api.Services
 
     public interface ILookupOptionService
     {
+        Task<IReadOnlyList<Dictionary<string, object?>>> GetActivePublicAsync(string? category, CancellationToken cancellationToken);
         Task<LookupOptionWriteResult> CreateAsync(CreateLookupOptionRequestDto request, CancellationToken cancellationToken);
         Task<LookupOptionWriteResult> UpdateAsync(string id, UpdateLookupOptionRequestDto request, CancellationToken cancellationToken);
         Task<LookupOptionWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
@@ -21,6 +22,9 @@ namespace DER3.Api.Services
         {
             _lookupOptionRepository = lookupOptionRepository;
         }
+
+        public Task<IReadOnlyList<Dictionary<string, object?>>> GetActivePublicAsync(string? category, CancellationToken cancellationToken) =>
+            _lookupOptionRepository.GetActivePublicAsync(category, cancellationToken);
 
         public async Task<LookupOptionWriteResult> CreateAsync(CreateLookupOptionRequestDto request, CancellationToken cancellationToken)
         {

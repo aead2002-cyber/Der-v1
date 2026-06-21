@@ -4,7 +4,7 @@ import { Shield, Plus, Edit2, Trash2, Save, X, Search, Lock, Check, CheckSquare,
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
+import { permissionGroupsApi } from '@/services/permissionGroupsApi';
 import { PermissionGroup } from '@/types';
 import { PERMISSION_SERVICES, permKey } from '@/permissions';
 import { cn } from '@/lib/utils';
@@ -18,8 +18,16 @@ export function PermissionGroupsManager() {
   const [editing, setEditing] = useState<PermissionGroup | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PermissionGroup | null>(null);
   const [search, setSearch] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const refresh = () => setGroups(mockService.getPermissionGroups());
+  const refresh = async () => {
+    try {
+      setGroups(await permissionGroupsApi.getPermissionGroups());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل المجموعات' : 'Failed to load groups'));
+    }
+  };
+
   useEffect(() => { refresh(); }, []);
 
   const startCreate = () => {
@@ -34,21 +42,58 @@ export function PermissionGroupsManager() {
 
   const startEdit = (g: PermissionGroup) => setEditing({ ...g, permissions: [...g.permissions] });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editing) return;
     if (!editing.nameAr.trim() || !editing.nameEn.trim()) {
       toast.error(isRtl ? 'يرجى تعبئة الاسم بالعربي والإنجليزي' : 'Please provide both names');
       return;
     }
-    mockService.savePermissionGroup(editing);
+    setIsSaving(true);
+    try {
+      const now = new Date().toISOString();
+      const payload = {
+        ...editing,
+        nameAr: editing.nameAr.trim(),
+        nameEn: editing.nameEn.trim(),
+        updatedAt: now,
+      };
+      if (groups.some(g => g.id === editing.id)) {
+        await permissionGroupsApi.updatePermissionGroup(editing.id, payload);
+      } else {
+        await permissionGroupsApi.createPermissionGroup({
+          ...payload,
+          createdAt: payload.createdAt || now,
+        });
+      }
+      toast.success(isRtl ? 'طھظ… ط­ظپط¸ ط§ظ„ظ…ط¬ظ…ظˆط¹ط©' : 'Group saved');
+      setEditing(null);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حفظ المجموعة' : 'Failed to save group'));
+    } finally {
+      setIsSaving(false);
+    }
+    return;
     toast.success(isRtl ? 'تم حفظ المجموعة' : 'Group saved');
     setEditing(null);
     refresh();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirmDelete) return;
-    const ok = mockService.deletePermissionGroup(confirmDelete.id);
+    setIsSaving(true);
+    try {
+      await permissionGroupsApi.deletePermissionGroup(confirmDelete.id);
+      toast.success(isRtl ? 'طھظ… ط­ط°ظپ ط§ظ„ظ…ط¬ظ…ظˆط¹ط©' : 'Group deleted');
+      setConfirmDelete(null);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حذف المجموعة' : 'Failed to delete group'));
+    } finally {
+      setIsSaving(false);
+    }
+    return;
+    const ok = true;
     if (ok) {
       toast.success(isRtl ? 'تم حذف المجموعة' : 'Group deleted');
     } else {
@@ -181,7 +226,7 @@ export function PermissionGroupsManager() {
               <X className="w-4 h-4 mr-1" />
               {t('cancel')}
             </Button>
-            <Button onClick={handleSave} className="bg-primary text-white rounded-lg h-10 px-6 font-bold">
+            <Button onClick={handleSave} disabled={isSaving} className="bg-primary text-white rounded-lg h-10 px-6 font-bold">
               <Save className="w-4 h-4 mr-1" />
               {t('save')}
             </Button>
@@ -204,7 +249,7 @@ export function PermissionGroupsManager() {
             <Button variant="outline" onClick={() => setConfirmDelete(null)} className="rounded-lg h-10 px-5 font-bold">
               {t('cancel')}
             </Button>
-            <Button onClick={handleDelete} className="bg-rose-600 hover:bg-rose-700 text-white rounded-lg h-10 px-6 font-bold">
+            <Button onClick={handleDelete} disabled={isSaving} className="bg-rose-600 hover:bg-rose-700 text-white rounded-lg h-10 px-6 font-bold">
               <Trash2 className="w-4 h-4 mr-1" />
               {t('delete')}
             </Button>

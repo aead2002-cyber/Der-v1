@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DER3.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2c95632121855069436e3cd66eb7502b0142e2bd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e450a863b6e8b8459d739b553d4af31ff0f632c7")]
 [assembly: System.Reflection.AssemblyProductAttribute("DER3.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DER3.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

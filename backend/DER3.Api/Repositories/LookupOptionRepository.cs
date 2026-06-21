@@ -15,6 +15,7 @@ namespace DER3.Api.Repositories
 
     public interface ILookupOptionRepository
     {
+        Task<IReadOnlyList<Dictionary<string, object?>>> GetActivePublicAsync(string? category, CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> InsertAsync(LookupOptionRecord lookupOption, CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> UpdateAsync(string id, IReadOnlyDictionary<string, object?> fields, CancellationToken cancellationToken);
         Task<bool> DeleteAsync(string id, CancellationToken cancellationToken);
@@ -27,6 +28,27 @@ namespace DER3.Api.Repositories
         public LookupOptionRepository(IConfiguration configuration)
         {
             _configuration = configuration;
+        }
+
+        public async Task<IReadOnlyList<Dictionary<string, object?>>> GetActivePublicAsync(string? category, CancellationToken cancellationToken)
+        {
+            await using var connection = await OpenConnectionAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT id, category, value, labelAr, labelEn, isActive, descriptionAr, descriptionEn
+                FROM LookupOption
+                WHERE isActive = 1 AND (@category IS NULL OR category = @category)
+                """;
+            AddNVarChar(command, "@category", 255, string.IsNullOrWhiteSpace(category) ? null : category.Trim());
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var rows = new List<Dictionary<string, object?>>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add(await ReadRowAsync(reader, cancellationToken));
+            }
+
+            return rows;
         }
 
         public async Task<Dictionary<string, object?>?> InsertAsync(LookupOptionRecord lookupOption, CancellationToken cancellationToken)

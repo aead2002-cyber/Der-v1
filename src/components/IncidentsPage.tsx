@@ -155,7 +155,8 @@ const IncidentsPage: React.FC = () => {
       updatedAt: new Date().toISOString()
     };
     
-    await incidentsApi.updateIncident(updated.id, updated);
+    try {
+      await incidentsApi.updateIncident(updated.id, updated);
     
     // Add Notification if enabled
     const settings = mockService.getNotificationSettings();
@@ -173,7 +174,11 @@ const IncidentsPage: React.FC = () => {
 
     toast.success(isRtl ? 'تم إسناد البلاغ بنجاح' : 'Incident assigned successfully');
     setIsAssignOpen(false);
-    await refreshData();
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to assign incident', error);
+      toast.error(isRtl ? 'تعذر إسناد البلاغ' : 'Could not assign incident');
+    }
   };
 
   const handleCreateIncident = async () => {
@@ -182,33 +187,35 @@ const IncidentsPage: React.FC = () => {
       return;
     }
 
+    const normalizedAssignee = newAssignee && newAssignee !== 'none' ? newAssignee : undefined;
     const newInc: SecurityIncident = {
       id: `INC-${Math.floor(Math.random() * 9000) + 1000}`,
       title: newTitle,
       description: newDescription,
       priority: newPriority as any,
       type: newType,
-      status: newAssignee ? 'open' : 'new',
+      status: normalizedAssignee ? 'open' : 'new',
       reporterEmail: 'admin@system.com',
-      assignedTo: newAssignee || undefined,
+      assignedTo: normalizedAssignee,
       reportedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       attachments: newAttachments
     };
 
-    await incidentsApi.createIncident(newInc);
+    try {
+      await incidentsApi.createIncident(newInc);
     
     // Add an initial note if it was assigned
-    if (newAssignee) {
-      const assigneeUser = users.find(u => u.uid === newAssignee);
+    if (normalizedAssignee) {
+      const assigneeUser = users.find(u => u.uid === normalizedAssignee);
       const note: IncidentNote = {
         id: Math.random().toString(36).substr(2, 9),
         incidentId: newInc.id,
         authorId: 'admin',
         authorName: 'System Admin',
         content: isRtl 
-          ? `تم إنشاء البلاغ وإسناده إلى ${assigneeUser?.displayName || newAssignee}` 
-          : `Incident created and assigned to ${assigneeUser?.displayName || newAssignee}`,
+          ? `تم إنشاء البلاغ وإسناده إلى ${assigneeUser?.displayName || normalizedAssignee}`
+          : `Incident created and assigned to ${assigneeUser?.displayName || normalizedAssignee}`,
         createdAt: new Date().toISOString(),
         attachments: []
       };
@@ -216,9 +223,9 @@ const IncidentsPage: React.FC = () => {
 
       // Add Notification if enabled
       const settings = mockService.getNotificationSettings();
-      if (settings.notifyOnAssignment && newAssignee !== 'none') {
+      if (settings.notifyOnAssignment) {
         mockService.addNotification({
-          userId: newAssignee,
+          userId: normalizedAssignee,
           titleAr: 'إسناد بلاغ جديد',
           titleEn: 'New Incident Assigned',
           messageAr: `تم إسناد بلاغ جديد لك: ${newTitle}`,
@@ -240,14 +247,23 @@ const IncidentsPage: React.FC = () => {
     setNewAssignee('');
     setNewAttachments([]);
     
-    await refreshData();
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to create incident', error);
+      toast.error(isRtl ? 'تعذر إنشاء البلاغ' : 'Could not create incident');
+    }
   };
 
   const handleViewHistory = async (incident: SecurityIncident) => {
     setSelectedIncident(incident);
-    const notes = await incidentNotesApi.getIncidentNotes();
-    setIncidentNotes(notes.filter(note => note.incidentId === incident.id));
-    setIsHistoryOpen(true);
+    try {
+      const notes = await incidentNotesApi.getIncidentNotes();
+      setIncidentNotes(notes.filter(note => note.incidentId === incident.id));
+      setIsHistoryOpen(true);
+    } catch (error) {
+      console.error('Failed to load incident history', error);
+      toast.error(isRtl ? 'تعذر تحميل سجل البلاغ' : 'Could not load incident history');
+    }
   };
 
   const handleViewAttachment = async (value: string) => {
@@ -255,8 +271,7 @@ const IncidentsPage: React.FC = () => {
       await filesApi.openFile(value);
     } catch (error) {
       console.error('Failed to open incident attachment', error);
-      setPreviewFile(value);
-      setIsPreviewOpen(true);
+      toast.error(isRtl ? 'تعذر فتح المرفق' : 'Could not open attachment');
     }
   };
 

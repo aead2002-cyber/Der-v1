@@ -20,6 +20,29 @@ namespace DER3.Api.Controllers
             _permissionGroupService = permissionGroupService;
         }
 
+        /// <summary>Returns all permission groups.</summary>
+        [HttpGet]
+        [EndpointSummary("Get permission groups")]
+        [EndpointDescription("Returns all PermissionGroup rows with permissions deserialized as an array.")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var rows = await _permissionGroupService.GetAllAsync(cancellationToken);
+                return Ok(rows);
+            }
+            catch (SqlException)
+            {
+                return StatusCode(500, new { error = "PermissionGroup query failed" });
+            }
+            catch (InvalidOperationException)
+            {
+                return StatusCode(500, new { error = "PermissionGroup storage is not configured" });
+            }
+        }
+
         /// <summary>Creates a permission group.</summary>
         /// <remarks>Accepts only existing PermissionGroup table fields. permissions is stored as JSON.</remarks>
         [HttpPost]

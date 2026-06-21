@@ -4,10 +4,11 @@ import { Save, X, Mail, User as UserIcon, Shield, Building2, Users as UsersIcon,
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
 import { usersApi } from '@/services/usersApi';
 import { teamsApi } from '@/services/teamsApi';
 import { departmentsApi } from '@/services/departmentsApi';
+import { permissionGroupsApi } from '@/services/permissionGroupsApi';
 import { User, Role, Team, Department, PermissionGroup } from '@/types';
 import { PERMISSION_SERVICES, permKey } from '@/permissions';
 import { cn } from '@/lib/utils';
@@ -39,19 +40,20 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     let active = true;
-    setPermissionGroups(mockService.getPermissionGroups());
     setShowOverrides(false);
 
     const load = async () => {
       try {
-        const [teams, departments, users] = await Promise.all([
+        const [teams, departments, groups, users] = await Promise.all([
           teamsApi.getTeams(),
           departmentsApi.getDepartments(),
+          permissionGroupsApi.getPermissionGroups(),
           userId ? usersApi.getUsers() : Promise.resolve([]),
         ]);
         if (!active) return;
         setAvailableTeams(teams);
         setAvailableDepts(departments);
+        setPermissionGroups(groups);
         if (userId) {
           const u = users.find(x => x.uid === userId);
           if (u) setFormData(u);

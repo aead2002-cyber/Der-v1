@@ -22,8 +22,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
-import { SecurityIncident, LookupOption } from '@/types';
+import { LookupOption } from '@/types';
+import { publicApi } from '@/services/publicApi';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +53,12 @@ const PublicReportPage: React.FC = () => {
   const [lookupOptions, setLookupOptions] = useState<LookupOption[]>([]);
 
   useEffect(() => {
-    setLookupOptions(mockService.getLookupOptions());
+    publicApi.getLookupOptions('incident_type')
+      .then(setLookupOptions)
+      .catch(error => {
+        console.error('Failed to load public lookup options', error);
+        setLookupOptions([]);
+      });
     const markInteraction = () => { interactedRef.current = true; };
     window.addEventListener('pointermove', markInteraction, { once: true });
     window.addEventListener('keydown', markInteraction, { once: true });
@@ -98,7 +103,7 @@ const PublicReportPage: React.FC = () => {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!email) {
       toast.error(isRtl ? 'يرجى إدخال البريد الإلكتروني' : 'Please enter email');
       return;
@@ -110,28 +115,24 @@ const PublicReportPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // Simulate submission
-    setTimeout(() => {
-      const id = 'INC-' + Math.floor(1000 + Math.random() * 9000);
-      const newIncident: SecurityIncident = {
-        id,
+    try {
+      const incident = await publicApi.createIncident({
         reporterEmail: email,
         title,
         description,
         type,
         priority,
-        status: 'new',
-        reportedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        attachments: attachments
-      };
-      
-      mockService.saveIncident(newIncident);
-      setReportId(id);
+        attachments
+      });
+
+      setReportId(incident.id);
       setStep(3);
+      toast.success(isRtl ? 'طھظ… طھظ‚ط¯ظٹظ… ط§ظ„ط¨ظ„ط§ط؛ ط¨ظ†ط¬ط§ط­' : 'Report submitted successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تقديم البلاغ' : 'Failed to submit report'));
+    } finally {
       setIsSubmitting(false);
-      toast.success(isRtl ? 'تم تقديم البلاغ بنجاح' : 'Report submitted successfully');
-    }, 1500);
+    }
   };
 
   return (
@@ -279,11 +280,18 @@ const PublicReportPage: React.FC = () => {
                         const file = e.target.files?.[0];
                         if (file) {
                           setIsUploading(true);
-                          setTimeout(() => {
-                            setAttachments(prev => [...prev, file.name]);
-                            setIsUploading(false);
-                            toast.success(isRtl ? 'تمت إضافة المرفق' : 'Attachment added');
-                          }, 800);
+                          publicApi.uploadFile(file)
+                            .then(uploaded => {
+                              setAttachments(prev => [...prev, uploaded.url]);
+                              toast.success(isRtl ? 'طھظ…طھ ط¥ط¶ط§ظپط© ط§ظ„ظ…ط±ظپظ‚' : 'Attachment added');
+                            })
+                            .catch(error => {
+                              toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر رفع المرفق' : 'Failed to upload attachment'));
+                            })
+                            .finally(() => {
+                              e.target.value = '';
+                              setIsUploading(false);
+                            });
                         }
                       }}
                     />

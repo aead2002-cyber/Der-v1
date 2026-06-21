@@ -14,8 +14,22 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockService, resolveAttachmentUrl } from '@/services/mockService';
 import { AuditLog, User } from '@/types';
+import { auditLogsApi } from '@/services/auditLogsApi';
+import { usersApi } from '@/services/usersApi';
+import { frameworksApi } from '@/services/frameworksApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
+import { standardClassificationsApi } from '@/services/standardClassificationsApi';
+import { proceduresApi } from '@/services/proceduresApi';
+import { evidenceApi } from '@/services/evidenceApi';
+import { commitmentsApi } from '@/services/commitmentsApi';
+import { incidentsApi } from '@/services/incidentsApi';
+import { risksApi } from '@/services/risksApi';
+import { changeRequestsApi } from '@/services/changeRequestsApi';
+import { resolveFileUrl } from '@/services/filesApi';
+import { EntityLookupData, getEntityDisplayName } from '@/lib/progressHelpers';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -37,6 +51,7 @@ export default function AuditTrailPage() {
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [lookupData, setLookupData] = useState<EntityLookupData>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [entityFilter, setEntityFilter] = useState<string>('all');
@@ -47,8 +62,65 @@ export default function AuditTrailPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    setLogs(mockService.getAuditLogs());
-    setUsers(mockService.getUsers());
+    let isMounted = true;
+
+    const loadData = async () => {
+      const [
+        auditLogs,
+        loadedUsers,
+        frameworks,
+        policies,
+        policyItems,
+        standards,
+        standardClassifications,
+        procedures,
+        evidence,
+        commitments,
+        incidents,
+        risks,
+        changeRequests,
+      ] = await Promise.all([
+        auditLogsApi.getAuditLogs(),
+        usersApi.getUsers(),
+        frameworksApi.getFrameworks(),
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+        standardsApi.getStandards(),
+        standardClassificationsApi.getStandardClassifications(),
+        proceduresApi.getProcedures(),
+        evidenceApi.getEvidence(),
+        commitmentsApi.getCommitments(),
+        incidentsApi.getIncidents(),
+        risksApi.getRisks(),
+        changeRequestsApi.getChangeRequests(),
+      ]);
+
+      if (!isMounted) return;
+      setLogs(auditLogs);
+      setUsers(loadedUsers);
+      setLookupData({
+        frameworks,
+        policies,
+        policyItems,
+        standards,
+        standardClassifications,
+        procedures,
+        evidence,
+        users: loadedUsers,
+        commitments,
+        incidents,
+        risks,
+        changeRequests,
+      });
+    };
+
+    loadData().catch(error => {
+      console.error('Failed to load audit trail data', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Derive option lists from the data itself so they stay accurate.
@@ -71,13 +143,13 @@ export default function AuditTrailPage() {
       const ts = new Date(log.timestamp).getTime();
       if (ts < fromMs || ts > toMs) return false;
       if (q) {
-        const name = mockService.getEntityDisplayName(log.entityType, log.entityId, isRtl) || '';
+        const name = getEntityDisplayName(log.entityType, log.entityId, isRtl, lookupData) || '';
         const blob = `${log.userName} ${log.entityType} ${log.action} ${log.entityId} ${name}`.toLowerCase();
         if (!blob.includes(q)) return false;
       }
       return true;
     });
-  }, [logs, searchTerm, actionFilter, entityFilter, userFilter, dateFrom, dateTo, isRtl]);
+  }, [logs, searchTerm, actionFilter, entityFilter, userFilter, dateFrom, dateTo, isRtl, lookupData]);
 
   const toggleExpanded = (id: string) => {
     const next = new Set(expanded);
@@ -104,7 +176,7 @@ export default function AuditTrailPage() {
         l.action,
         l.entityType,
         l.entityId,
-        mockService.getEntityDisplayName(l.entityType, l.entityId, isRtl) || '',
+        getEntityDisplayName(l.entityType, l.entityId, isRtl, lookupData) || '',
         l.oldValue ? JSON.stringify(l.oldValue) : '',
         l.newValue ? JSON.stringify(l.newValue) : '',
       ]),
@@ -259,7 +331,7 @@ export default function AuditTrailPage() {
             {filteredLogs.map(log => {
               const u = userById.get(log.userId);
               const initials = (log.userName || '?').trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
-              const entityName = mockService.getEntityDisplayName(log.entityType, log.entityId, isRtl);
+              const entityName = getEntityDisplayName(log.entityType, log.entityId, isRtl, lookupData);
               const isExpanded = expanded.has(log.id);
               const hasDiff = log.oldValue !== undefined || log.newValue !== undefined;
               const actionStyle = ACTION_STYLES[log.action] || 'bg-slate-50 text-slate-700 border-slate-200';
@@ -271,7 +343,7 @@ export default function AuditTrailPage() {
                     <div className="shrink-0">
                       {u?.photoURL ? (
                         <img
-                          src={resolveAttachmentUrl(u.photoURL) || u.photoURL}
+                          src={resolveFileUrl(u.photoURL) || u.photoURL}
                           alt={log.userName}
                           className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}

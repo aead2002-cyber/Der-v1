@@ -17,6 +17,7 @@ namespace DER3.Api.Repositories
 
     public interface IPermissionGroupRepository
     {
+        Task<IReadOnlyList<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> InsertAsync(PermissionGroupRecord permissionGroup, CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> UpdateAsync(string id, IReadOnlyDictionary<string, object?> fields, CancellationToken cancellationToken);
         Task<bool> DeleteAsync(string id, CancellationToken cancellationToken);
@@ -29,6 +30,22 @@ namespace DER3.Api.Repositories
         public PermissionGroupRepository(IConfiguration configuration)
         {
             _configuration = configuration;
+        }
+
+        public async Task<IReadOnlyList<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken)
+        {
+            await using var connection = await OpenConnectionAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, isSystem, permissions, createdAt, updatedAt FROM PermissionGroup";
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var rows = new List<Dictionary<string, object?>>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add(await ReadRowAsync(reader, cancellationToken));
+            }
+
+            return rows;
         }
 
         public async Task<Dictionary<string, object?>?> InsertAsync(PermissionGroupRecord permissionGroup, CancellationToken cancellationToken)

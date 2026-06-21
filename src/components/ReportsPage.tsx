@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   FileText, 
@@ -29,10 +29,27 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import * as XLSX from 'xlsx';
-import { mockService } from '@/services/mockService';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { ChangeRequest, Commitment, Framework, Policy, PolicyItem, Procedure, Risk, SecurityIncident, Standard, User } from '@/types';
+import { changeRequestsApi } from '@/services/changeRequestsApi';
+import { commitmentsApi } from '@/services/commitmentsApi';
+import { frameworksApi } from '@/services/frameworksApi';
+import { incidentsApi } from '@/services/incidentsApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { proceduresApi } from '@/services/proceduresApi';
+import { risksApi } from '@/services/risksApi';
+import { standardsApi } from '@/services/standardsApi';
+import { usersApi } from '@/services/usersApi';
+import {
+  getFrameworkProgress,
+  getPolicyProgress,
+  getRiskLikelihood,
+  getStandardProgress,
+  getStandardsInPolicy,
+} from '@/lib/progressHelpers';
 import { 
   PieChart, 
   Pie, 
@@ -48,6 +65,32 @@ import {
 } from 'recharts';
 
 type ReportCategory = 'compliance' | 'incidents' | 'commitments' | 'requests' | 'frameworks' | 'risks' | 'all';
+
+interface ReportsData {
+  procedures: Procedure[];
+  incidents: SecurityIncident[];
+  commitments: Commitment[];
+  requests: ChangeRequest[];
+  policies: Policy[];
+  frameworks: Framework[];
+  standards: Standard[];
+  policyItems: PolicyItem[];
+  users: User[];
+  risks: Risk[];
+}
+
+const emptyReportsData: ReportsData = {
+  procedures: [],
+  incidents: [],
+  commitments: [],
+  requests: [],
+  policies: [],
+  frameworks: [],
+  standards: [],
+  policyItems: [],
+  users: [],
+  risks: [],
+};
 
 export default function ReportsPage() {
   const { t, i18n } = useTranslation();
@@ -83,18 +126,59 @@ export default function ReportsPage() {
 
   const isRtl = i18n.language === 'ar';
 
-  const rawData = useMemo(() => ({
-    procedures: mockService.getProcedures(),
-    incidents: mockService.getIncidents(),
-    commitments: mockService.getCommitments(),
-    requests: mockService.getChangeRequests(),
-    policies: mockService.getPolicies(),
-    frameworks: mockService.getFrameworks(),
-    standards: mockService.getStandards(),
-    policyItems: mockService.getPolicyItems(),
-    users: mockService.getUsers(),
-    risks: mockService.getRisks()
-  }), []);
+  const [rawData, setRawData] = useState<ReportsData>(emptyReportsData);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      const [
+        procedures,
+        incidents,
+        commitments,
+        requests,
+        policies,
+        frameworks,
+        standards,
+        policyItems,
+        users,
+        risks,
+      ] = await Promise.all([
+        proceduresApi.getProcedures(),
+        incidentsApi.getIncidents(),
+        commitmentsApi.getCommitments(),
+        changeRequestsApi.getChangeRequests(),
+        policiesApi.getPolicies(),
+        frameworksApi.getFrameworks(),
+        standardsApi.getStandards(),
+        policyItemsApi.getPolicyItems(),
+        usersApi.getUsers(),
+        risksApi.getRisks(),
+      ]);
+
+      if (!isMounted) return;
+      setRawData({
+        procedures,
+        incidents,
+        commitments,
+        requests,
+        policies,
+        frameworks,
+        standards,
+        policyItems,
+        users,
+        risks,
+      });
+    };
+
+    loadData().catch(error => {
+      console.error('Failed to load report data', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Apply all active filters once; downstream stats/charts/HTML/Excel all read
   // from this so display and export stay in sync.
@@ -117,7 +201,11 @@ export default function ReportsPage() {
       (filterPolicy === 'all' || p.id === filterPolicy)
     );
     const policyIds = new Set(policies.map(p => p.id));
-    const standards = rawData.standards.filter(s => policyIds.has(s.policyId));
+    const scopedStandardIds = new Set<string>();
+    policies.forEach(policy => {
+      getStandardsInPolicy(policy.id, rawData.standards, rawData.policyItems).forEach(id => scopedStandardIds.add(id));
+    });
+    const standards = rawData.standards.filter(s => scopedStandardIds.has(s.id) || policyIds.has(s.policyId));
     const standardIds = new Set(standards.map(s => s.id));
     const policyItems = rawData.policyItems.filter(i => policyIds.has(i.policyId));
 
@@ -162,7 +250,7 @@ export default function ReportsPage() {
 
   const risksDetail = useMemo(() => {
     return data.risks.map((r: any) => {
-      const likelihood = mockService.getRiskLikelihood(r);
+      const likelihood = getRiskLikelihood(r, rawData.procedures);
       const score = likelihood * (r.impact || 1);
       const level = score >= 15 ? 'very_high' : score >= 9 ? 'high' : score >= 4 ? 'medium' : 'low';
       const linkedProcs = (r.procedureIds || []).map((id: string) => rawData.procedures.find((p: any) => p.id === id)).filter(Boolean);
@@ -197,7 +285,7 @@ export default function ReportsPage() {
       const policies = data.policies.filter((p: any) => p.frameworkId === f.id);
       // Mirror getFrameworkProgress's union path so counts and the progress bar agree.
       const stdIdSet = new Set<string>();
-      policies.forEach((p: any) => mockService._standardsInPolicy(p.id).forEach(sid => stdIdSet.add(sid)));
+      policies.forEach((p: any) => getStandardsInPolicy(p.id, data.standards, data.policyItems).forEach(sid => stdIdSet.add(sid)));
       const standards = data.standards.filter((s: any) => stdIdSet.has(s.id));
       const standardIds = Array.from(stdIdSet);
       const procedures = data.procedures.filter((pr: any) => stdIdSet.has(pr.standardId));
@@ -205,7 +293,7 @@ export default function ReportsPage() {
       const inProgress = procedures.filter((pr: any) => pr.status === 'in_progress').length;
       const notStarted = procedures.filter((pr: any) => pr.status === 'not_started').length;
       const overdue = procedures.filter((pr: any) => pr.status !== 'completed' && pr.endDate && new Date(pr.endDate).getTime() < Date.now()).length;
-      const progress = mockService.getFrameworkProgress(f.id);
+      const progress = getFrameworkProgress(f.id, data.policies, data.standards, data.policyItems, data.procedures);
       return {
         id: f.id,
         nameAr: f.nameAr,
@@ -421,9 +509,9 @@ export default function ReportsPage() {
       frameworksDetail.forEach(f => {
         if (f.policies.length === 0) return;
         const policyRows = f.policies.map((p: any) => {
-          const pStdIds = mockService._standardsInPolicy(p.id);
+          const pStdIds = getStandardsInPolicy(p.id, data.standards, data.policyItems);
           const pProcs = data.procedures.filter((pr: any) => pStdIds.includes(pr.standardId));
-          const pProgress = mockService.getPolicyProgress(p.id);
+          const pProgress = getPolicyProgress(p.id, data.standards, data.policyItems, data.procedures);
           return `<tr>
             <td>${escapeHtml(isRtl ? p.nameAr : p.nameEn)}</td>
             <td>${pStdIds.length}</td>
@@ -623,7 +711,7 @@ export default function ReportsPage() {
           const policiesRows: any[] = [];
           frameworksDetail.forEach(f => {
             f.policies.forEach((p: any) => {
-              const pStdIds = mockService._standardsInPolicy(p.id);
+              const pStdIds = getStandardsInPolicy(p.id, data.standards, data.policyItems);
               const pProcs = data.procedures.filter((pr: any) => pStdIds.includes(pr.standardId));
               policiesRows.push({
                 Framework: isRtl ? f.nameAr : f.nameEn,
@@ -631,7 +719,7 @@ export default function ReportsPage() {
                 Standards: pStdIds.length,
                 Procedures: pProcs.length,
                 Completed: pProcs.filter((pr: any) => pr.status === 'completed').length,
-                'Progress %': mockService.getPolicyProgress(p.id)
+                'Progress %': getPolicyProgress(p.id, data.standards, data.policyItems, data.procedures)
               });
             });
           });
@@ -647,7 +735,7 @@ export default function ReportsPage() {
                 Framework: isRtl ? f.nameAr : f.nameEn,
                 Policy: policy ? (isRtl ? policy.nameAr : policy.nameEn) : '',
                 Standard: isRtl ? s.nameAr : s.nameEn,
-                'Progress %': mockService.getStandardProgress(s.id)
+                'Progress %': getStandardProgress(s.id, data.procedures)
               });
             });
           });
@@ -1160,10 +1248,10 @@ export default function ReportsPage() {
                               </thead>
                               <tbody>
                                 {f.policies.map((p: any) => {
-                                  const pStdIds = mockService._standardsInPolicy(p.id);
+                                  const pStdIds = getStandardsInPolicy(p.id, data.standards, data.policyItems);
                                   const pStds = data.standards.filter((s: any) => pStdIds.includes(s.id));
                                   const pProcs = data.procedures.filter((pr: any) => pStdIds.includes(pr.standardId));
-                                  const pProgress = mockService.getPolicyProgress(p.id);
+                                  const pProgress = getPolicyProgress(p.id, data.standards, data.policyItems, data.procedures);
                                   return (
                                     <tr key={p.id} className="border-b border-slate-100">
                                       <td className="py-2 px-2 font-bold text-slate-700">{isRtl ? p.nameAr : p.nameEn}</td>

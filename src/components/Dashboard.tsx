@@ -25,19 +25,75 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CountUp } from './shared/CountUp';
-import { mockService, resolveAttachmentUrl } from '@/services/mockService';
+import { resolveFileUrl } from '@/services/filesApi';
 import { cn } from '@/lib/utils';
-import { ComplianceSettings, AuditLog } from '@/types';
+import { AuditLog, ChangeRequest, Commitment, Department, Framework, Policy, PolicyItem, Procedure, Risk, SecurityIncident, Standard, Team, User } from '@/types';
+import { auditLogsApi } from '@/services/auditLogsApi';
+import { changeRequestsApi } from '@/services/changeRequestsApi';
+import { commitmentsApi } from '@/services/commitmentsApi';
+import { departmentsApi } from '@/services/departmentsApi';
+import { frameworksApi } from '@/services/frameworksApi';
+import { incidentsApi } from '@/services/incidentsApi';
+import { policiesApi } from '@/services/policiesApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { proceduresApi } from '@/services/proceduresApi';
+import { risksApi } from '@/services/risksApi';
+import { standardsApi } from '@/services/standardsApi';
+import { teamsApi } from '@/services/teamsApi';
+import { usersApi } from '@/services/usersApi';
+import {
+  aggregateStandardWeights,
+  defaultComplianceSettings,
+  getDepartmentPerformance,
+  getFrameworkProgress,
+  getPolicyProgress,
+  getRiskLikelihood,
+  getStandardsInPolicy,
+  getUserPerformance,
+} from '@/lib/progressHelpers';
 import { formatDistanceToNow } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { motion } from 'motion/react';
 
+interface DashboardData {
+  auditLogs: AuditLog[];
+  changeRequests: ChangeRequest[];
+  commitments: Commitment[];
+  departments: Department[];
+  frameworks: Framework[];
+  incidents: SecurityIncident[];
+  policies: Policy[];
+  policyItems: PolicyItem[];
+  procedures: Procedure[];
+  risks: Risk[];
+  standards: Standard[];
+  teams: Team[];
+  users: User[];
+}
+
+const emptyDashboardData: DashboardData = {
+  auditLogs: [],
+  changeRequests: [],
+  commitments: [],
+  departments: [],
+  frameworks: [],
+  incidents: [],
+  policies: [],
+  policyItems: [],
+  procedures: [],
+  risks: [],
+  standards: [],
+  teams: [],
+  users: [],
+};
+
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
+  const [dashboardData, setDashboardData] = useState<DashboardData>(emptyDashboardData);
   const [counts, setCounts] = useState({ total: 0, completed: 0, inProgress: 0, notStarted: 0, delayed: 0 });
   const [frameworkProgressList, setFrameworkProgressList] = useState<any[]>([]);
   const [globalScore, setGlobalScore] = useState(0);
-  const [complianceSettings, setComplianceSettings] = useState<ComplianceSettings | null>(null);
+  const [complianceSettings] = useState(defaultComplianceSettings);
   const [activities, setActivities] = useState<AuditLog[]>([]);
   const [userPerformance, setUserPerformance] = useState<any[]>([]);
   const [deptPerformance, setDeptPerformance] = useState<any[]>([]);
@@ -61,29 +117,85 @@ export default function Dashboard() {
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
-    setFrameworks(mockService.getFrameworks());
-    setAllPolicies(mockService.getPolicies());
+    let isMounted = true;
+
+    const loadData = async () => {
+      const [
+        auditLogs,
+        changeRequests,
+        commitments,
+        departments,
+        loadedFrameworks,
+        incidents,
+        loadedPolicies,
+        policyItems,
+        procedures,
+        risks,
+        standards,
+        teams,
+        users,
+      ] = await Promise.all([
+        auditLogsApi.getAuditLogs(),
+        changeRequestsApi.getChangeRequests(),
+        commitmentsApi.getCommitments(),
+        departmentsApi.getDepartments(),
+        frameworksApi.getFrameworks(),
+        incidentsApi.getIncidents(),
+        policiesApi.getPolicies(),
+        policyItemsApi.getPolicyItems(),
+        proceduresApi.getProcedures(),
+        risksApi.getRisks(),
+        standardsApi.getStandards(),
+        teamsApi.getTeams(),
+        usersApi.getUsers(),
+      ]);
+
+      if (!isMounted) return;
+      setDashboardData({
+        auditLogs,
+        changeRequests,
+        commitments,
+        departments,
+        frameworks: loadedFrameworks,
+        incidents,
+        policies: loadedPolicies,
+        policyItems,
+        procedures,
+        risks,
+        standards,
+        teams,
+        users,
+      });
+      setFrameworks(loadedFrameworks);
+      setAllPolicies(loadedPolicies);
+    };
+
+    loadData().catch(error => {
+      console.error('Failed to load dashboard data', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    let procedures = mockService.getProcedures();
+    let procedures = dashboardData.procedures;
     let currentFrameworks = frameworks;
 
     if (selectedFrameworkId !== 'all') {
-      const policies = mockService.getPolicies().filter(p => p.frameworkId === selectedFrameworkId);
+      const policies = dashboardData.policies.filter(p => p.frameworkId === selectedFrameworkId);
       const policyIds = policies.map(p => p.id);
       procedures = procedures.filter(p => policyIds.includes(p.policyId));
       currentFrameworks = frameworks.filter(f => f.id === selectedFrameworkId);
     }
 
-    const settings = mockService.getComplianceSettings();
-    const logs = mockService.getAuditLogs().slice(0, 5);
-    const users = mockService.getUsers();
+    const logs = dashboardData.auditLogs.slice(0, 5);
+    const users = dashboardData.users;
 
-    setComplianceSettings(settings);
     setActivities(logs);
-    setUserPerformance(mockService.getUserPerformance());
-    setDeptPerformance(mockService.getDepartmentPerformance());
+    setUserPerformance(getUserPerformance(dashboardData.users, dashboardData.procedures));
+    setDeptPerformance(getDepartmentPerformance(dashboardData.departments, dashboardData.teams, dashboardData.users, dashboardData.procedures));
     setTeamSize(users.length);
 
     setCounts({
@@ -102,15 +214,15 @@ export default function Dashboard() {
       return !isNaN(end) && end < todayMs;
     }).length);
 
-    const incidents = mockService.getIncidents();
+    const incidents = dashboardData.incidents;
     setOpenIncidents(incidents.filter(i => i.status !== 'resolved' && i.status !== 'closed').length);
 
-    const requests = mockService.getChangeRequests();
+    const requests = dashboardData.changeRequests;
     setOpenChangeRequests(requests.filter(r => r.status === 'pending' || r.status === 'clarification_needed').length);
 
     const progressList = currentFrameworks.map(f => {
-      const progress = mockService.getFrameworkProgress(f.id);
-      const policies = mockService.getPolicies().filter(p => p.frameworkId === f.id);
+      const progress = getFrameworkProgress(f.id, dashboardData.policies, dashboardData.standards, dashboardData.policyItems, dashboardData.procedures);
+      const policies = dashboardData.policies.filter(p => p.frameworkId === f.id);
       return {
         name: isRtl ? f.nameAr : f.nameEn,
         progress,
@@ -125,18 +237,18 @@ export default function Dashboard() {
       // Weighted global compliance: aggregate every leaf procedure across all frameworks
       // in scope. Empty frameworks contribute nothing instead of pulling the average down.
       const stdIdSet = new Set<string>();
-      const allPolicies = mockService.getPolicies();
+      const allPolicies = dashboardData.policies;
       currentFrameworks.forEach(f => {
         allPolicies
           .filter(p => p.frameworkId === f.id)
-          .forEach(p => mockService._standardsInPolicy(p.id).forEach(sid => stdIdSet.add(sid)));
+          .forEach(p => getStandardsInPolicy(p.id, dashboardData.standards, dashboardData.policyItems).forEach(sid => stdIdSet.add(sid)));
       });
-      const { completed: cw, total: tw } = mockService._aggregateStandardWeights(Array.from(stdIdSet));
+      const { completed: cw, total: tw } = aggregateStandardWeights(Array.from(stdIdSet), dashboardData.procedures);
       setGlobalScore(tw === 0 ? 0 : Math.round((cw / tw) * 100));
     } else {
       setGlobalScore(0);
     }
-  }, [t, isRtl, frameworks, selectedFrameworkId]);
+  }, [t, isRtl, frameworks, selectedFrameworkId, dashboardData]);
 
   const policiesView = useMemo(() => {
     let list = policiesFrameworkId === 'all'
@@ -151,17 +263,17 @@ export default function Dashboard() {
       );
     }
 
-    const allStandards = mockService.getStandards();
-    const allProcedures = mockService.getProcedures();
-    const allPolicyItems = mockService.getPolicyItems();
-    const allUsers = mockService.getUsers();
+    const allStandards = dashboardData.standards;
+    const allProcedures = dashboardData.procedures;
+    const allPolicyItems = dashboardData.policyItems;
+    const allUsers = dashboardData.users;
     const userById = new Map(allUsers.map(u => [u.uid, u]));
 
     const enriched = list.map(p => {
-      const progress = mockService.getPolicyProgress(p.id);
+      const progress = getPolicyProgress(p.id, allStandards, allPolicyItems, allProcedures);
       // Mirror getPolicyProgress's union (direct s.policyId + standards linked via items) so
       // procedure counts / distribution % shown on this card reconcile with the progress bar.
-      const policyStandardIds = mockService._standardsInPolicy(p.id);
+      const policyStandardIds = getStandardsInPolicy(p.id, allStandards, allPolicyItems);
       const policyProcedures = allProcedures.filter(pr => policyStandardIds.includes(pr.standardId));
       const policyItemsCount = allPolicyItems.filter(it => it.policyId === p.id).length;
       const assigneeIds = new Set<string>();
@@ -208,8 +320,8 @@ export default function Dashboard() {
     // per-policy helper uses), then divides completed weight by total weight. Policies
     // with no procedures contribute nothing instead of being averaged in as 0%.
     const stdIdSet = new Set<string>();
-    enriched.forEach(p => mockService._standardsInPolicy(p.id).forEach(sid => stdIdSet.add(sid)));
-    const { completed: cw, total: tw } = mockService._aggregateStandardWeights(Array.from(stdIdSet));
+    enriched.forEach(p => getStandardsInPolicy(p.id, allStandards, allPolicyItems).forEach(sid => stdIdSet.add(sid)));
+    const { completed: cw, total: tw } = aggregateStandardWeights(Array.from(stdIdSet), allProcedures);
     const avg = tw === 0 ? 0 : Math.round((cw / tw) * 100);
 
     const completed = enriched.filter(p => p.progress === 100).length;
@@ -218,7 +330,7 @@ export default function Dashboard() {
     const completedPctOfTotal = enriched.length === 0 ? 0 : Math.round((completed / enriched.length) * 100);
 
     return { list: enriched, avg, completed, inProgress, notStarted, completedPctOfTotal };
-  }, [policiesFrameworkId, policiesSearch, policiesSortKey, policiesSortDir, allPolicies, isRtl]);
+  }, [policiesFrameworkId, policiesSearch, policiesSortKey, policiesSortDir, allPolicies, isRtl, dashboardData]);
 
   const policyComplianceLabel = (() => {
     if (!complianceSettings) return { label: '', color: '#3b82f6' };
@@ -631,7 +743,7 @@ export default function Dashboard() {
                                     className="w-6 h-6 border-2 border-white shadow-sm"
                                     title={displayName}
                                   >
-                                    <AvatarImage src={resolveAttachmentUrl(u.photoURL || '') || u.photoURL} />
+                                    <AvatarImage src={resolveFileUrl(u.photoURL || '') || u.photoURL} />
                                     <AvatarFallback className="text-[9px] bg-blue-50 text-blue-700 font-bold">
                                       {(displayName || '?').trim().split(/\s+/).map((s: string) => s[0]).slice(0, 2).join('').toUpperCase()}
                                     </AvatarFallback>
@@ -736,17 +848,17 @@ export default function Dashboard() {
 
       {/* TAB 2: Commitments indicators */}
       <TabsContent value="commitments" className="mt-6">
-        <CommitmentsIndicators isRtl={isRtl} />
+        <CommitmentsIndicators isRtl={isRtl} commitments={dashboardData.commitments} users={dashboardData.users} />
       </TabsContent>
 
       {/* TAB 3: Incident indicators */}
       <TabsContent value="incidents" className="mt-6">
-        <IncidentIndicators isRtl={isRtl} />
+        <IncidentIndicators isRtl={isRtl} incidents={dashboardData.incidents} />
       </TabsContent>
 
       {/* TAB 4: Risk indicators */}
       <TabsContent value="risks" className="mt-6">
-        <RiskIndicators isRtl={isRtl} />
+        <RiskIndicators isRtl={isRtl} risks={dashboardData.risks} procedures={dashboardData.procedures} />
       </TabsContent>
 
       {/* TAB 5: Existing overview */}
@@ -831,7 +943,7 @@ export default function Dashboard() {
                     <div key={user.uid} className="group">
                       <div className="flex items-center gap-3 mb-2">
                         <Avatar className="w-8 h-8 border border-white shadow-sm shrink-0">
-                          <AvatarImage src={resolveAttachmentUrl(user.photoURL || '') || user.photoURL} />
+                          <AvatarImage src={resolveFileUrl(user.photoURL || '') || user.photoURL} />
                           <AvatarFallback className="text-[10px] bg-slate-100 font-bold shrink-0">
                             {user.displayName.charAt(0)}
                           </AvatarFallback>
@@ -1028,18 +1140,10 @@ export default function Dashboard() {
 }
 
 // ----- Commitments indicators tab -----
-function CommitmentsIndicators({ isRtl }: { isRtl: boolean }) {
-  const [commitments, setCommitments] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-
-  useEffect(() => {
-    setCommitments(mockService.getCommitments());
-    setUsers(mockService.getUsers());
-  }, []);
-
+function CommitmentsIndicators({ isRtl, commitments, users }: { isRtl: boolean; commitments: Commitment[]; users: User[] }) {
   const stats = useMemo(() => {
     const today = new Date();
-    const notifyDays = mockService.getNotificationSettings()?.notifyBeforeDays ?? 30;
+    const notifyDays = 30;
     const isExpired = (c: any) => c.status === 'expired' || (c.expiryDate && new Date(c.expiryDate) < today && c.status !== 'completed');
     const isExpiringSoon = (c: any) => {
       if (!c.expiryDate) return false;
@@ -1157,13 +1261,7 @@ function CommitmentsIndicators({ isRtl }: { isRtl: boolean }) {
 }
 
 // ----- Incident indicators tab -----
-function IncidentIndicators({ isRtl }: { isRtl: boolean }) {
-  const [incidents, setIncidents] = useState<any[]>([]);
-
-  useEffect(() => {
-    setIncidents(mockService.getIncidents());
-  }, []);
-
+function IncidentIndicators({ isRtl, incidents }: { isRtl: boolean; incidents: SecurityIncident[] }) {
   const stats = useMemo(() => {
     const today = new Date();
     return {
@@ -1312,21 +1410,12 @@ function IncidentIndicators({ isRtl }: { isRtl: boolean }) {
 }
 
 // ----- Risk indicators tab -----
-function RiskIndicators({ isRtl }: { isRtl: boolean }) {
-  const [risks, setRisks] = useState<any[]>([]);
-  // refresh procedures so likelihood recomputes when status changes elsewhere
-  const [_, setProcsTick] = useState(0);
-
-  useEffect(() => {
-    setRisks(mockService.getRisks());
-    setProcsTick(t => t + 1);
-  }, []);
-
+function RiskIndicators({ isRtl, risks, procedures }: { isRtl: boolean; risks: Risk[]; procedures: Procedure[] }) {
   const enriched = useMemo(() => risks.map(r => {
-    const likelihood = mockService.getRiskLikelihood(r);
+    const likelihood = getRiskLikelihood(r, procedures);
     const score = likelihood * (r.impact || 1);
     return { ...r, effectiveLikelihood: likelihood, score };
-  }), [risks]);
+  }), [risks, procedures]);
 
   const stats = useMemo(() => ({
     total: enriched.length,

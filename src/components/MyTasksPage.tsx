@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockService, uploadFile, resolveAttachmentUrl } from '../services/mockService';
+import { auditLogsApi } from '@/services/auditLogsApi';
+import { changeRequestsApi } from '@/services/changeRequestsApi';
 import { commitmentsApi } from '@/services/commitmentsApi';
 import { frameworksApi } from '@/services/frameworksApi';
+import { incidentFeedbackApi } from '@/services/incidentFeedbackApi';
+import { incidentNotesApi } from '@/services/incidentNotesApi';
 import { incidentsApi } from '@/services/incidentsApi';
 import { lookupOptionsApi } from '@/services/lookupOptionsApi';
+import { notificationsApi } from '@/services/notificationsApi';
 import { policiesApi } from '@/services/policiesApi';
 import { policyItemsApi } from '@/services/policyItemsApi';
 import { proceduresApi } from '@/services/proceduresApi';
+import { evidenceApi } from '@/services/evidenceApi';
+import { filesApi, resolveFileUrl } from '@/services/filesApi';
 import { standardsApi } from '@/services/standardsApi';
+import { usersApi } from '@/services/usersApi';
 import { useTableSort } from './shared/useTableSort';
 import { SortableTableHead } from './shared/SortableTableHead';
 import { Procedure, Commitment, PolicyItem, SecurityIncident, IncidentFeedback, IncidentNote, Evidence, ChangeRequest, ChangeRequestStatus, ChangeRequestType, Notification, AuditLog, LookupOption } from '../types';
@@ -164,16 +171,24 @@ export default function MyTasksPage() {
   const [isRequestUploading, setIsRequestUploading] = useState(false);
   const [isActionUploadingRequest, setIsActionUploadingRequest] = useState(false);
 
-  const refreshRequests = () => {
+  const refreshRequests = async () => {
     if (user) {
-      const allRequests = mockService.getChangeRequests();
-      setMySentRequests(allRequests.filter(r => r.senderId === user.uid));
-      setMyReceivedRequests(allRequests.filter(r => r.receiverId === user.uid));
-      setUsers(mockService.getUsers().filter(u => u.uid !== user.uid));
+      try {
+        const [allRequests, allUsers] = await Promise.all([
+          changeRequestsApi.getChangeRequests(),
+          usersApi.getUsers(),
+        ]);
+        setMySentRequests(allRequests.filter(r => r.senderId === user.uid));
+        setMyReceivedRequests(allRequests.filter(r => r.receiverId === user.uid));
+        setUsers(allUsers.filter(u => u.uid !== user.uid));
+      } catch (error) {
+        console.error('Failed to load change requests', error);
+        toast.error(t('failed_to_load_data') || 'Failed to load data');
+      }
     }
   };
 
-  const handleCreateRequest = () => {
+  const handleCreateRequest = async () => {
     if (!user || !newRequest.title || !newRequest.receiverId) {
       toast.error(t('fill_required_fields'));
       return;
@@ -203,7 +218,7 @@ export default function MyTasksPage() {
       updatedAt: new Date().toISOString()
     };
 
-    mockService.saveChangeRequest(request);
+    await changeRequestsApi.createChangeRequest(request);
     
     // Add notification for receiver
     const notification: Notification = {
@@ -218,7 +233,7 @@ export default function MyTasksPage() {
       createdAt: new Date().toISOString(),
       link: '/tasks'
     };
-    mockService.saveNotification(notification);
+    await notificationsApi.createNotification(notification);
 
     // Audit Log
     const audit: AuditLog = {
@@ -226,19 +241,19 @@ export default function MyTasksPage() {
       userId: user.uid,
       userName: user.displayName,
       action: 'create',
-      entityType: 'policy', // Should be 'change_request' but using existing type
+      entityType: 'change_request',
       entityId: request.id,
       timestamp: new Date().toISOString()
     };
-    mockService.saveAuditLog(audit);
+    await auditLogsApi.createAuditLog(audit);
 
-    setIsNewRequestDialogOpen(false);
-    setNewRequest({ title: '', description: '', type: 'tool_change', receiverId: '', attachments: [] });
-    refreshRequests();
-    toast.success(t('request_sent_success'));
+      setIsNewRequestDialogOpen(false);
+      setNewRequest({ title: '', description: '', type: 'tool_change', receiverId: '', attachments: [] });
+      await refreshRequests();
+      toast.success(t('request_sent_success'));
   };
 
-  const handleRequestAction = (action: 'approve' | 'reject' | 'request_clarification' | 'respond_clarification') => {
+  const handleRequestAction = async (action: 'approve' | 'reject' | 'request_clarification' | 'respond_clarification') => {
     if (!user || !selectedRequest || !requestActionNote) {
       toast.error(isRtl ? 'الملاحظة مطلوبة' : 'Note is required');
       return;
@@ -262,7 +277,7 @@ export default function MyTasksPage() {
     if (action === 'request_clarification') updatedRequest.status = 'clarification_needed';
     if (action === 'respond_clarification') updatedRequest.status = 'pending';
 
-    mockService.saveChangeRequest(updatedRequest);
+    await changeRequestsApi.updateChangeRequest(updatedRequest.id, updatedRequest);
 
     // Notify the other party
     const targetUserId = user.uid === updatedRequest.senderId ? updatedRequest.receiverId : updatedRequest.senderId;
@@ -278,14 +293,14 @@ export default function MyTasksPage() {
       createdAt: new Date().toISOString(),
       link: '/tasks'
     };
-    mockService.saveNotification(notification);
+    await notificationsApi.createNotification(notification);
 
-    setIsManageRequestDialogOpen(false);
-    setSelectedRequest(null);
-    setRequestActionNote('');
-    setRequestActionAttachments([]);
-    refreshRequests();
-    toast.success(t('request_action_success'));
+      setIsManageRequestDialogOpen(false);
+      setSelectedRequest(null);
+      setRequestActionNote('');
+      setRequestActionAttachments([]);
+    await refreshRequests();
+      toast.success(t('request_action_success'));
   };
 
   // Evidence Management Dialog State
@@ -305,9 +320,15 @@ export default function MyTasksPage() {
   const [isDeleteEvidenceConfirmOpen, setIsDeleteEvidenceConfirmOpen] = useState(false);
   const [evidenceIdToDelete, setEvidenceIdToDelete] = useState<string | null>(null);
 
-  const openEvidenceDialog = (proc: Procedure) => {
+  const openEvidenceDialog = async (proc: Procedure) => {
     setSelectedProcedureForEvidence(proc);
-    setEvidenceList(mockService.getEvidence(proc.id));
+    try {
+      setEvidenceList(await evidenceApi.getEvidence(proc.id));
+    } catch (error) {
+      console.error('Failed to load evidence', error);
+      toast.error(isRtl ? 'تعذر تحميل الشواهد' : 'Could not load evidence');
+      setEvidenceList([]);
+    }
     setIsEvidenceDialogOpen(true);
   };
 
@@ -335,8 +356,14 @@ export default function MyTasksPage() {
       let failedCount = 0;
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        const uploaded = await uploadFile(file);
-        if (!uploaded) { failedCount++; continue; }
+        let uploaded;
+        try {
+          uploaded = await filesApi.uploadFile(file);
+        } catch (error) {
+          console.error('Failed to upload evidence file', error);
+          failedCount++;
+          continue;
+        }
         const baseName = (newEvidence.name || '').trim();
         const evidenceName = selectedFiles.length > 1
           ? (baseName ? `${baseName} — ${file.name}` : file.name)
@@ -351,11 +378,16 @@ export default function MyTasksPage() {
           uploadedBy: user?.uid || '',
           uploadedAt: new Date().toISOString(),
         };
-        mockService.saveEvidence(evidence);
-        uploadedCount++;
+        try {
+          await evidenceApi.createEvidence(evidence);
+          uploadedCount++;
+        } catch (error) {
+          console.error('Failed to save evidence', error);
+          failedCount++;
+        }
       }
       setIsUploadingEvidenceTask(false);
-      setEvidenceList(mockService.getEvidence(selectedProcedureForEvidence.id));
+      setEvidenceList(await evidenceApi.getEvidence(selectedProcedureForEvidence.id));
       setIsAddEvidenceDialogOpen(false);
       setNewEvidence({ name: '', description: '', url: '', type: 'PDF' });
       setSelectedFile(null);
@@ -381,11 +413,17 @@ export default function MyTasksPage() {
       description: newEvidence.description || '',
       url: newEvidence.url || '',
       type: 'LINK',
-      uploadedBy: user?.displayName || 'User',
+      uploadedBy: user?.uid || '',
       uploadedAt: new Date().toISOString(),
     };
-    mockService.saveEvidence(evidence);
-    setEvidenceList(mockService.getEvidence(selectedProcedureForEvidence.id));
+    try {
+      await evidenceApi.createEvidence(evidence);
+      setEvidenceList(await evidenceApi.getEvidence(selectedProcedureForEvidence.id));
+    } catch (error) {
+      console.error('Failed to save evidence', error);
+      toast.error(isRtl ? 'تعذر إضافة الشاهد' : 'Could not add evidence');
+      return;
+    }
     setIsAddEvidenceDialogOpen(false);
     setNewEvidence({ name: '', description: '', url: '', type: 'PDF' });
     setSelectedFile(null);
@@ -399,7 +437,7 @@ export default function MyTasksPage() {
     setIsDeleteEvidenceConfirmOpen(true);
   };
 
-  const confirmDeleteEvidence = () => {
+  const confirmDeleteEvidence = async () => {
     if (evidenceIdToDelete && selectedProcedureForEvidence) {
       // Defense in depth: even if the delete button somehow leaked through, only
       // the uploader or someone with the full-delete permission can actually delete.
@@ -411,8 +449,14 @@ export default function MyTasksPage() {
         setEvidenceIdToDelete(null);
         return;
       }
-      mockService.deleteEvidence(evidenceIdToDelete);
-      setEvidenceList(mockService.getEvidence(selectedProcedureForEvidence.id));
+      try {
+        await evidenceApi.deleteEvidence(evidenceIdToDelete);
+        setEvidenceList(await evidenceApi.getEvidence(selectedProcedureForEvidence.id));
+      } catch (error) {
+        console.error('Failed to delete evidence', error);
+        toast.error(isRtl ? 'تعذر حذف الشاهد' : 'Could not delete evidence');
+        return;
+      }
       setIsDeleteEvidenceConfirmOpen(false);
       setEvidenceIdToDelete(null);
       toast.success(isRtl ? 'تم حذف الشاهد بنجاح' : 'Evidence deleted successfully');
@@ -431,14 +475,21 @@ export default function MyTasksPage() {
     e.target.value = ''; // allow re-selecting the same file
   };
 
-  const openIncidentDetails = (inc: SecurityIncident) => {
+  const openIncidentDetails = async (inc: SecurityIncident) => {
     setSelectedIncForDetails(inc);
-    setIncidentNotes(mockService.getIncidentNotes(inc.id));
+    try {
+      const notes = await incidentNotesApi.getIncidentNotes();
+      setIncidentNotes(notes.filter(note => note.incidentId === inc.id));
+    } catch (error) {
+      console.error('Failed to load incident notes', error);
+      toast.error(isRtl ? 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظ…ظ„ط§ط­ط¸ط§طھ' : 'Could not load notes');
+      setIncidentNotes([]);
+    }
     setIsViewDetailsOpen(true);
   };
 
   const handleViewAttachment = (value: string) => {
-    const url = resolveAttachmentUrl(value);
+    const url = resolveFileUrl(value);
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
       return;
@@ -449,7 +500,7 @@ export default function MyTasksPage() {
 
   const attachmentLabel = (value: string) => {
     if (!value) return '';
-    if (value.startsWith('/uploads/') || /^https?:\/\//i.test(value)) {
+    if (value.startsWith('/api/files/') || value.startsWith('/uploads/') || /^https?:\/\//i.test(value)) {
       const parts = value.split('/');
       return parts[parts.length - 1].replace(/^\d+-[a-f0-9]+-/, '');
     }
@@ -578,18 +629,26 @@ export default function MyTasksPage() {
     refreshRequests();
   }, [user, procSearch, procStatus, procImportance, procPolicy, procFramework, procDate, commSearch, commStatus, commDate, incSearch, incStatus, isRtl, policies]);
 
-  const handleStatusChange = (procId: string, newStatus: string) => {
-    const procedure = mockService.getProcedures().find(p => p.id === procId);
-    if (procedure) {
-      const updated = { ...procedure, status: newStatus as any, updatedAt: new Date().toISOString() };
-      mockService.saveProcedure(updated);
-      refreshData();
+  const handleStatusChange = async (procId: string, newStatus: string) => {
+    try {
+      const latestProcedures = await proceduresApi.getProcedures();
+      const procedure = latestProcedures.find(p => p.id === procId);
+      if (!procedure) return;
+
+      const updated: Procedure = { ...procedure, status: newStatus as any, updatedAt: new Date().toISOString() };
+      await proceduresApi.updateProcedure(updated.id, updated);
+      await refreshData();
       toast.success(t('status_updated_successfully') || 'Status updated successfully');
+    } catch (error) {
+      console.error('Failed to update procedure status', error);
+      toast.error(isRtl ? 'تعذر تحديث حالة الإجراء' : 'Could not update procedure status');
     }
   };
 
-  const handleCommitmentStatusChange = (commId: string, newStatus: string) => {
-    const commitment = mockService.getCommitments().find(c => c.id === commId);
+  const handleCommitmentStatusChange = async (commId: string, newStatus: string) => {
+    try {
+      const latestCommitments = await commitmentsApi.getCommitments();
+      const commitment = latestCommitments.find(c => c.id === commId);
     if (commitment) {
       if (newStatus === 'completed') {
         setSelectedCommForComplete(commitment);
@@ -597,15 +656,19 @@ export default function MyTasksPage() {
         setCommEvidenceLink('');
         setIsCommCompleteDialogOpen(true);
       } else {
-        const updated = { ...commitment, status: newStatus as any };
-        mockService.saveCommitment(updated);
-        refreshData();
+        const updated: Commitment = { ...commitment, status: newStatus as any, updatedAt: new Date().toISOString() };
+        await commitmentsApi.updateCommitment(updated.id, updated);
+        await refreshData();
         toast.success(t('status_updated_successfully') || 'Status updated successfully');
       }
     }
+    } catch (error) {
+      console.error('Failed to update commitment status', error);
+      toast.error(isRtl ? 'تعذر تحديث حالة الالتزام' : 'Could not update commitment status');
+    }
   };
 
-  const confirmCommitmentCompletion = () => {
+  const confirmCommitmentCompletion = async () => {
     if (!selectedCommForComplete) return;
     if (!commEvidenceLink) {
       toast.error(isRtl ? 'يجب إرفاق ملف لإثبات الإنجاز' : 'You must attach a file to prove completion');
@@ -621,11 +684,18 @@ export default function MyTasksPage() {
       updatedAt: new Date().toISOString()
     };
 
-    mockService.saveCommitment(updated);
-    setIsCommCompleteDialogOpen(false);
-    setSelectedCommForComplete(null);
-    refreshData();
-    toast.success(t('commitment_completed_success') || 'Commitment completed successfully');
+    try {
+      await commitmentsApi.updateCommitment(updated.id, updated);
+      setIsCommCompleteDialogOpen(false);
+      setSelectedCommForComplete(null);
+      setCommEvidenceTitle('');
+      setCommEvidenceLink('');
+      await refreshData();
+      toast.success(t('commitment_completed_success') || 'Commitment completed successfully');
+    } catch (error) {
+      console.error('Failed to complete commitment', error);
+      toast.error(isRtl ? 'تعذر إكمال الالتزام' : 'Could not complete commitment');
+    }
   };
 
   // Feedback simulation state
@@ -645,7 +715,7 @@ export default function MyTasksPage() {
     }
   };
 
-  const confirmIncidentAction = () => {
+  const confirmIncidentAction = async () => {
     if (!selectedIncForAction || !actionNote) {
       toast.error(isRtl ? 'الملاحظة إلزامية' : 'Note is mandatory');
       return;
@@ -664,7 +734,7 @@ export default function MyTasksPage() {
       };
       
       // Save incident
-      mockService.saveIncident(updated);
+      await incidentsApi.updateIncident(updated.id, updated);
       
       // Save note
       const note: any = {
@@ -676,26 +746,26 @@ export default function MyTasksPage() {
         createdAt: new Date().toISOString(),
         attachments: actionAttachments
       };
-      mockService.saveIncidentNote(note);
+      await incidentNotesApi.createIncidentNote(note);
 
-      setIsActionDialogOpen(false);
-      setSelectedIncForAction(null);
-      refreshData();
-      toast.success(t('status_updated_successfully') || 'Status updated successfully');
+        setIsActionDialogOpen(false);
+        setSelectedIncForAction(null);
+      await refreshData();
+        toast.success(t('status_updated_successfully') || 'Status updated successfully');
     }
   };
 
-  const confirmCloseIncident = () => {
+  const confirmCloseIncident = async () => {
     if (!closingIncidentId || !selectedIncForAction) return;
     
-    const incident = mockService.getIncidents().find(i => i.id === closingIncidentId);
+    const incident = (await incidentsApi.getIncidents()).find(i => i.id === closingIncidentId);
     if (incident) {
       const updated: SecurityIncident = { 
         ...incident, 
         status: 'resolved', 
         updatedAt: new Date().toISOString() 
       };
-      mockService.saveIncident(updated);
+      await incidentsApi.updateIncident(updated.id, updated);
       
       // Save the action note and attachments
       const note: any = {
@@ -707,7 +777,7 @@ export default function MyTasksPage() {
         createdAt: new Date().toISOString(),
         attachments: actionAttachments
       };
-      mockService.saveIncidentNote(note);
+      await incidentNotesApi.createIncidentNote(note);
 
       // Auto-generate feedback (simulating the reporter's response)
       const feedback: IncidentFeedback = {
@@ -717,13 +787,13 @@ export default function MyTasksPage() {
         comment: feedbackComment || (isRtl ? 'شكراً لكم على سرعة الاستجابة تم حل المشكلة' : 'Thank you for the quick response, the problem is resolved'),
         submittedAt: new Date().toISOString()
       };
-      mockService.saveIncidentFeedback(feedback);
+      await incidentFeedbackApi.createIncidentFeedback(feedback);
       
       setIsClosingDialogOpen(false);
       setClosingIncidentId(null);
       setSelectedIncForAction(null);
       setFeedbackComment('');
-      refreshData();
+      await refreshData();
       toast.success(isRtl ? 'تم وضع الحالة "تم الحل" وتسجيل التقييم المحاكى' : 'Status set to "Resolved" and simulated feedback recorded');
     }
   };
@@ -1745,7 +1815,12 @@ export default function MyTasksPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  onClick={() => handleViewAttachment(comm.evidenceLink!)}
+                                  onClick={() => {
+                                    filesApi.openFile(comm.evidenceLink!).catch((error) => {
+                                      console.error('Failed to open commitment evidence', error);
+                                      toast.error(isRtl ? 'تعذر فتح إثبات الالتزام' : 'Could not open commitment evidence');
+                                    });
+                                  }}
                                   title={isRtl ? 'عرض الإثبات' : 'View Evidence'}
                                 >
                                   <Paperclip className="w-5 h-5" />
@@ -2295,7 +2370,13 @@ export default function MyTasksPage() {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         setIsCommUploading(true);
-                        const uploaded = await uploadFile(file);
+                        let uploaded;
+                        try {
+                          uploaded = await filesApi.uploadFile(file);
+                        } catch (error) {
+                          console.error('Failed to upload commitment evidence', error);
+                          toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed');
+                        }
                         setIsCommUploading(false);
                         e.target.value = '';
                         if (!uploaded) { toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed'); return; }
@@ -2567,7 +2648,7 @@ export default function MyTasksPage() {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setIsActionUploading(true);
-                      const uploaded = await uploadFile(file);
+                      const uploaded = await filesApi.uploadFile(file);
                       setIsActionUploading(false);
                       e.target.value = '';
                       if (!uploaded) { toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed'); return; }
@@ -2731,7 +2812,7 @@ export default function MyTasksPage() {
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
               disabled={!newCommentText.trim() || !commentProcedure}
-              onClick={() => {
+              onClick={async () => {
                 if (!commentProcedure || !newCommentText.trim()) return;
                 const newComment: any = {
                   id: Math.random().toString(36).slice(2, 11),
@@ -2741,16 +2822,23 @@ export default function MyTasksPage() {
                   text: newCommentText.trim(),
                   createdAt: new Date().toISOString()
                 };
-                const updated: Procedure = {
-                  ...commentProcedure,
-                  comments: [...(commentProcedure.comments || []), newComment],
-                  updatedAt: new Date().toISOString()
-                };
-                mockService.saveProcedure(updated);
-                setMyProcedures(mockService.getProcedures().filter(p => (p.assignedTo || []).includes(user?.uid || '')));
-                setCommentProcedure(updated);
-                setNewCommentText('');
+                try {
+                  const latestProcedures = await proceduresApi.getProcedures();
+                  const procedure = latestProcedures.find(p => p.id === commentProcedure.id) || commentProcedure;
+                  const updated: Procedure = {
+                    ...procedure,
+                    comments: [...(procedure.comments || []), newComment],
+                    updatedAt: new Date().toISOString()
+                  };
+                  const saved = await proceduresApi.updateProcedure(updated.id, updated);
+                  await refreshData();
+                  setCommentProcedure(saved);
+                  setNewCommentText('');
                 toast.success(isRtl ? 'تم إضافة التعليق' : 'Comment added');
+                } catch (error) {
+                  console.error('Failed to add procedure comment', error);
+                  toast.error(isRtl ? 'تعذر إضافة التعليق' : 'Could not add comment');
+                }
               }}
             >
               <MessageSquare className="w-4 h-4 mr-2" />
@@ -2841,13 +2929,16 @@ export default function MyTasksPage() {
                         {new Date(evidence.uploadedAt).toLocaleDateString(isRtl ? 'ar-SA' : 'en-US')}
                       </div>
                       <a
-                        href={resolveAttachmentUrl(evidence.url) || evidence.url}
+                        href={evidence.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => {
-                          if (!resolveAttachmentUrl(evidence.url)) {
-                            e.preventDefault();
-                            toast.error(isRtl ? 'الملف غير متاح — أعد رفعه' : 'Attachment unavailable — please re-upload');
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          try {
+                            await filesApi.openFile(evidence.url);
+                          } catch (error) {
+                            console.error('Failed to open evidence file', error);
+                            toast.error(isRtl ? 'تعذر فتح الشاهد' : 'Could not open evidence');
                           }
                         }}
                         className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline"
@@ -3156,7 +3247,7 @@ export default function MyTasksPage() {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setIsRequestUploading(true);
-                      const uploaded = await uploadFile(file);
+                      const uploaded = await filesApi.uploadFile(file);
                       setIsRequestUploading(false);
                       e.target.value = '';
                       if (!uploaded) { toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed'); return; }
@@ -3442,7 +3533,7 @@ export default function MyTasksPage() {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         setIsActionUploadingRequest(true);
-                        const uploaded = await uploadFile(file);
+                        const uploaded = await filesApi.uploadFile(file);
                         setIsActionUploadingRequest(false);
                         e.target.value = '';
                         if (!uploaded) { toast.error(isRtl ? 'فشل رفع الملف' : 'Upload failed'); return; }

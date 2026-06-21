@@ -8,6 +8,7 @@ namespace DER3.Api.Services
 
     public interface IPermissionGroupService
     {
+        Task<IReadOnlyList<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken);
         Task<PermissionGroupWriteResult> CreateAsync(CreatePermissionGroupRequestDto request, CancellationToken cancellationToken);
         Task<PermissionGroupWriteResult> UpdateAsync(string id, UpdatePermissionGroupRequestDto request, CancellationToken cancellationToken);
         Task<PermissionGroupWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
@@ -21,6 +22,9 @@ namespace DER3.Api.Services
         {
             _permissionGroupRepository = permissionGroupRepository;
         }
+
+        public Task<IReadOnlyList<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken) =>
+            _permissionGroupRepository.GetAllAsync(cancellationToken);
 
         public async Task<PermissionGroupWriteResult> CreateAsync(CreatePermissionGroupRequestDto request, CancellationToken cancellationToken)
         {
