@@ -12,10 +12,13 @@ import {
   DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
 import { frameworksApi } from '@/services/frameworksApi';
 import { policiesApi } from '@/services/policiesApi';
-import { Framework, Policy } from '@/types';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { proceduresApi } from '@/services/proceduresApi';
+import { standardsApi } from '@/services/standardsApi';
+import { getPolicyProgress } from '@/lib/progressHelpers';
+import { Framework, Policy, PolicyItem, Procedure, Standard } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -26,6 +29,9 @@ export default function FrameworksPage() {
   const { can } = useAuth();
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
+  const [standards, setStandards] = useState<Standard[]>([]);
+  const [policyItems, setPolicyItems] = useState<PolicyItem[]>([]);
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -55,12 +61,18 @@ export default function FrameworksPage() {
 
   const loadData = async () => {
     try {
-      const [frameworkRows, policyRows] = await Promise.all([
+      const [frameworkRows, policyRows, standardRows, policyItemRows, procedureRows] = await Promise.all([
         frameworksApi.getFrameworks(),
         policiesApi.getPolicies(),
+        standardsApi.getStandards(),
+        policyItemsApi.getPolicyItems(),
+        proceduresApi.getProcedures(),
       ]);
       setFrameworks(frameworkRows);
       setPolicies(policyRows);
+      setStandards(standardRows);
+      setPolicyItems(policyItemRows);
+      setProcedures(procedureRows);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load frameworks');
     }
@@ -470,7 +482,7 @@ export default function FrameworksPage() {
               
               <div className="space-y-2.5">
                 {policies.filter(p => p.frameworkId === selectedFrameworkDetails?.id).map((policy) => {
-                  const progress = mockService.getPolicyProgress(policy.id);
+                  const progress = getPolicyProgress(policy.id, standards, policyItems, procedures);
                   return (
                     <div 
                       key={policy.id} 

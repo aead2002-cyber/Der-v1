@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { mockService, uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
 import { usersApi } from '@/services/usersApi';
 import { teamsApi } from '@/services/teamsApi';
 import { departmentsApi } from '@/services/departmentsApi';

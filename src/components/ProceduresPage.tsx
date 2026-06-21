@@ -40,12 +40,12 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
 import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
 import { frameworksApi } from '@/services/frameworksApi';
 import { usersApi } from '@/services/usersApi';
+import { getProcedureEffectiveWeight } from '@/lib/progressHelpers';
 import { ExportMenu } from './shared/ExportMenu';
 import { ProceduresImport } from './shared/ProceduresImport';
 import { ProcedureFormDialog } from './shared/ProcedureFormDialog';
@@ -305,7 +305,7 @@ export default function ProceduresPage() {
       }
       case 'endDate': return p.endDate || '';
       case 'assigned': return (p.assignedTo || []).length;
-      case 'weight': return mockService.getProcedureEffectiveWeight(p.id, procedures);
+      case 'weight': return getProcedureEffectiveWeight(p.id, procedures);
       default: return '';
     }
   })
@@ -357,7 +357,7 @@ export default function ProceduresPage() {
               { header: isRtl ? 'المعيار' : 'Standard', accessor: (p: any) => standards.find(x => x.id === p.standardId)?.[isRtl ? 'nameAr' : 'nameEn'] || '' },
               { header: isRtl ? 'الحالة' : 'Status', accessor: (p: any) => t(p.status) },
               { header: isRtl ? 'الأهمية' : 'Importance', accessor: (p: any) => t(p.importance) },
-              { header: isRtl ? 'الوزن' : 'Weight', accessor: (p: any) => mockService.getProcedureEffectiveWeight(p.id, procedures) },
+              { header: isRtl ? 'الوزن' : 'Weight', accessor: (p: any) => getProcedureEffectiveWeight(p.id, procedures) },
               { header: isRtl ? 'تاريخ البداية' : 'Start Date', accessor: (p: any) => p.startDate || '' },
               { header: isRtl ? 'تاريخ الانتهاء' : 'End Date', accessor: (p: any) => p.endDate || '' },
               { header: isRtl ? 'المسند إليهم' : 'Assigned To', accessor: (p: any) => (p.assignedTo || []).map((uid: string) => users.find(u => u.uid === uid)?.displayName || uid).join(', ') },
@@ -651,7 +651,7 @@ export default function ProceduresPage() {
                       <td>
                         {(() => {
                           const hasChildren = procedures.some(c => c.parentId === proc.id);
-                          const w = mockService.getProcedureEffectiveWeight(proc.id, procedures);
+                          const w = getProcedureEffectiveWeight(proc.id, procedures);
                           return (
                             <div
                               className={cn(

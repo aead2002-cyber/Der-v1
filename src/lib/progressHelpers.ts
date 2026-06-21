@@ -38,6 +38,21 @@ export const getProcedureLeafWeight = (procedure: Procedure | null | undefined):
   return Math.max(1, Math.min(10, Math.round(raw)));
 };
 
+export const getProcedureEffectiveWeight = (
+  procedureId: string,
+  procedures: Procedure[],
+): number => {
+  const procedure = procedures.find(item => item.id === procedureId);
+  if (!procedure) return 0;
+
+  const children = procedures.filter(item => item.parentId === procedureId);
+  if (children.length === 0) {
+    return getProcedureLeafWeight(procedure);
+  }
+
+  return children.reduce((sum, child) => sum + getProcedureEffectiveWeight(child.id, procedures), 0);
+};
+
 export const getStandardsInPolicy = (
   policyId: string,
   standards: Standard[],
@@ -75,6 +90,19 @@ export const aggregateStandardWeights = (
 
 export const getStandardProgress = (standardId: string, procedures: Procedure[]): number => {
   const { completed, total } = aggregateStandardWeights([standardId], procedures);
+  return total === 0 ? 0 : Math.round((completed / total) * 100);
+};
+
+export const getPolicyItemProgress = (
+  itemId: string,
+  standards: Standard[],
+  procedures: Procedure[],
+): number => {
+  const standardIds = standards
+    .filter(standard => getStandardItemIds(standard).includes(itemId))
+    .map(standard => standard.id);
+
+  const { completed, total } = aggregateStandardWeights(standardIds, procedures);
   return total === 0 ? 0 : Math.round((completed / total) * 100);
 };
 

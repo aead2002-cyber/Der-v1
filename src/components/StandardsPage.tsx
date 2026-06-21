@@ -46,7 +46,7 @@ import {
   DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog';
-import { mockService, getStandardItemIds } from '@/services/mockService';
+import { proceduresApi } from '@/services/proceduresApi';
 import { ExportMenu } from './shared/ExportMenu';
 import { useTableSort } from './shared/useTableSort';
 import { SortableTh } from './shared/SortableTh';
@@ -123,13 +123,14 @@ export default function StandardsPage() {
 
   const loadData = async () => {
     try {
-      const [standardRows, policyRows, itemRows, frameworkRows, classificationRows, userRows] = await Promise.all([
+      const [standardRows, policyRows, itemRows, frameworkRows, classificationRows, userRows, procedureRows] = await Promise.all([
         standardsApi.getStandards(),
         policiesApi.getPolicies(),
         policyItemsApi.getPolicyItems(),
         frameworksApi.getFrameworks(),
         standardClassificationsApi.getStandardClassifications(),
         usersApi.getUsers(),
+        proceduresApi.getProcedures(),
       ]);
       setStandards(standardRows);
       setPolicies(policyRows);
@@ -140,7 +141,31 @@ export default function StandardsPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load standards');
     }
-    setProcedures(mockService.getProcedures());
+    setProcedures(procedureRows);
+
+  };
+
+
+  const getStandardItemIds = (standard: any): string[] => {
+    const candidates = standard.policyItemIds ?? standard.policyItems ?? standard.itemIds ?? standard.items ?? [];
+    if (Array.isArray(candidates)) return candidates.map((x:any)=>typeof x==='string'?x:x?.id).filter(Boolean);
+    return [];
+  };
+
+  const getProcedureEffectiveWeight = (procedureId: string, allProcedures: Procedure[]) => {
+    const p:any = allProcedures.find(x=>x.id===procedureId);
+    if(!p) return 0;
+    const w=Number(p.weight??0);
+    if(w>0) return w;
+    return p.importance==='high'?3:p.importance==='medium'?2:1;
+  };
+
+  const getStandardProgress = (standardId:string)=>{
+    const rel=procedures.filter((p:any)=>p.standardId===standardId);
+    if(!rel.length) return 0;
+    const total=rel.reduce((s,p)=>s+getProcedureEffectiveWeight(p.id,procedures),0);
+    const done=rel.filter((p:any)=>p.status==='completed').reduce((s,p)=>s+getProcedureEffectiveWeight(p.id,procedures),0);
+    return total?Math.round(done/total*100):0;
   };
 
   const handleDelete = (id: string) => {
@@ -184,12 +209,13 @@ export default function StandardsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.saveProcedure(procedure as any);
+    await proceduresApi.createProcedure(procedure as any);
     toast.success(t('procedure_added_success') || 'Procedure added successfully');
     setIsQuickAddOpen(false);
     // Refresh data to show updated progress and counts
     await loadData();
-    setProcedures(mockService.getProcedures());
+    setProcedures(procedureRows);
+
   };
 
   const handleSaveClass = async () => {
@@ -277,7 +303,7 @@ export default function StandardsPage() {
         return fw ? (isRtl ? fw.nameAr : fw.nameEn) : '';
       }
       case 'policy': return (policies.find(p => p.id === s.policyId)?.[isRtl ? 'nameAr' : 'nameEn']) || '';
-      case 'progress': return mockService.getStandardProgress(s.id);
+      case 'progress': return getStandardProgress(s.id);
       case 'item': return getStandardItemIds(s).length;
       case 'classifications': return (s.classifications || []).length;
       default: return '';
@@ -466,7 +492,7 @@ export default function StandardsPage() {
               { header: isRtl ? 'عدد البنود' : 'Items Count', accessor: (s: any) => getStandardItemIds(s).length },
               { header: isRtl ? 'التصنيفات' : 'Classifications', accessor: (s: any) => (s.classifications || []).map((cid: string) => classifications.find(c => c.id === cid)?.[isRtl ? 'nameAr' : 'nameEn']).filter(Boolean).join(', ') },
               { header: isRtl ? 'الإجراءات' : 'Procedures', accessor: (s: any) => procedures.filter((p: any) => p.standardId === s.id).length },
-              { header: isRtl ? 'نسبة الالتزام %' : 'Progress %', accessor: (s: any) => `${mockService.getStandardProgress(s.id)}%` }
+              { header: isRtl ? 'نسبة الالتزام %' : 'Progress %', accessor: (s: any) => `${getStandardProgress(s.id)}%` }
             ]}
           />
           {can('standards.create') && (
@@ -697,11 +723,11 @@ export default function StandardsPage() {
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-border-subtle rounded-full overflow-hidden">
                           <div 
-                            className={cn("h-full transition-all duration-500", mockService.getStandardProgress(standard.id) === 100 ? "bg-emerald-500" : "bg-primary")}
-                            style={{ width: `${mockService.getStandardProgress(standard.id)}%` }}
+                            className={cn("h-full transition-all duration-500", getStandardProgress(standard.id) === 100 ? "bg-emerald-500" : "bg-primary")}
+                            style={{ width: `${getStandardProgress(standard.id)}%` }}
                           ></div>
                         </div>
-                        <span className="text-[10px] font-bold text-text-main">{mockService.getStandardProgress(standard.id)}%</span>
+                        <span className="text-[10px] font-bold text-text-main">{getStandardProgress(standard.id)}%</span>
                       </div>
                     </td>
                     <td>
@@ -1327,7 +1353,7 @@ export default function StandardsPage() {
                     <ul className="divide-y divide-border-subtle">
                       {procsList.map(p => {
                         const statusColor = p.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : p.status === 'in_progress' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600';
-                        const weight = mockService.getProcedureEffectiveWeight(p.id, procedures);
+                        const weight = getProcedureEffectiveWeight(p.id, procedures);
                         return (
                           <li key={p.id} className="py-3 px-2 hover:bg-slate-50/60 rounded-lg">
                             <div className="flex items-center justify-between gap-3">

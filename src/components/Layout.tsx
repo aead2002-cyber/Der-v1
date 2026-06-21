@@ -46,7 +46,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/AuthContext';
-import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { filesApi, resolveFileUrl } from '@/services/filesApi';
 import { notificationsApi } from '@/services/notificationsApi';
 import { PasswordRulesList, isPasswordValid } from './shared/PasswordRules';
 import { Notification } from '@/types';
@@ -133,7 +133,7 @@ export default function Layout({ children }: LayoutProps) {
       toast.error(t('select_image_file') || 'Please select an image file');
       return;
     }
-    const uploaded = await uploadFile(file);
+    const uploaded = await filesApi.uploadFile(file);
     if (!uploaded) {
       toast.error(t('upload_failed') || 'Upload failed');
       return;
@@ -547,7 +547,7 @@ export default function Layout({ children }: LayoutProps) {
             <DropdownMenu>
               <DropdownMenuTrigger nativeButton={true} render={<button className="w-8 h-8 rounded-full bg-[#e2e8f0] border border-[#e2e8f0] cursor-pointer overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 flex items-center justify-center" />}>
                 <Avatar className="w-full h-full">
-                  <AvatarImage src={resolveAttachmentUrl(user?.photoURL || '') || user?.photoURL} />
+                  <AvatarImage src={resolveFileUrl(user?.photoURL || '') || user?.photoURL} />
                   <AvatarFallback className="bg-[#e2e8f0] text-[#1e293b] text-[10px] font-bold">
                     {(isRtl ? user?.displayName : ((user as any)?.displayNameEn || user?.displayName))?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                   </AvatarFallback>
@@ -598,7 +598,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex flex-col items-center gap-4 py-4">
                 <div className="relative group">
                   <Avatar className="w-24 h-24 border-4 border-slate-100 shadow-md transition-transform group-hover:scale-105">
-                    <AvatarImage src={resolveAttachmentUrl(profileData.photoURL || '') || profileData.photoURL} />
+                    <AvatarImage src={resolveFileUrl(profileData.photoURL || '') || profileData.photoURL} />
                     <AvatarFallback className="bg-slate-200 text-slate-500 text-2xl font-black">
                       {profileData.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>

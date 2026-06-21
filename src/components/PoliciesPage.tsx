@@ -1,26 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, MoreVertical, Edit2, Trash2, Shield, Upload, FileText, Activity, PlusCircle, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Upload, FileText, Activity, PlusCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Input } from '@/components/ui/input';
 import Papa from 'papaparse';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
 import { ExportMenu } from './shared/ExportMenu';
 import { useTableSort } from './shared/useTableSort';
 import { SortableTh } from './shared/SortableTh';
@@ -32,14 +31,20 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/AuthContext';
 import { policiesApi } from '@/services/policiesApi';
 import { frameworksApi } from '@/services/frameworksApi';
+import { policyItemsApi } from '@/services/policyItemsApi';
+import { standardsApi } from '@/services/standardsApi';
+import { proceduresApi } from '@/services/proceduresApi';
 
 export default function PoliciesPage() {
   const { t, i18n } = useTranslation();
   const { can } = useAuth();
+
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [policyItems, setPolicyItems] = useState<any[]>([]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [frameworkFilter, setFrameworkFilter] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -47,6 +52,7 @@ export default function PoliciesPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
   const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
+
   const [newItem, setNewItem] = useState({
     nameAr: '',
     nameEn: '',
@@ -54,9 +60,11 @@ export default function PoliciesPage() {
     descriptionEn: '',
     order: 0
   });
+
   const [newPolicy, setNewPolicy] = useState<Partial<Policy>>({
     frameworkId: 'nca'
   });
+
   const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
   const [detailDialog, setDetailDialog] = useState<{ type: 'items' | 'standards' | 'procedures'; policy: Policy } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,17 +77,71 @@ export default function PoliciesPage() {
 
   const loadData = async () => {
     try {
-      const [policyRows, frameworkRows] = await Promise.all([
+      const [policyRows, frameworkRows, itemRows, standardRows, procedureRows] = await Promise.all([
         policiesApi.getPolicies(),
         frameworksApi.getFrameworks(),
+        policyItemsApi.getPolicyItems(),
+        standardsApi.getStandards(),
+        proceduresApi.getProcedures(),
       ]);
+
       setPolicies(policyRows);
       setFrameworks(frameworkRows);
+      setPolicyItems(itemRows);
+      setStandards(standardRows);
+      setProcedures(procedureRows);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load policies');
     }
-    setStandards(mockService.getStandards());
-    setProcedures(mockService.getProcedures());
+  };
+
+  const getPolicyItemsForPolicy = (policyId: string) =>
+    policyItems.filter((item: any) => item.policyId === policyId);
+
+  const getStandardIdsForPolicy = (policyId: string) => {
+    const itemIds = getPolicyItemsForPolicy(policyId).map((item: any) => item.id);
+
+    return standards
+      .filter((standard: any) =>
+        standard.policyId === policyId ||
+        itemIds.includes(standard.policyItemId) ||
+        itemIds.includes(standard.itemId)
+      )
+      .map((standard) => standard.id);
+  };
+
+  const getPolicyStats = (policyId: string) => {
+    const standardIds = getStandardIdsForPolicy(policyId);
+
+    const proceduresCount = procedures.filter((p: any) =>
+      p.policyId === policyId || standardIds.includes(p.standardId)
+    ).length;
+
+    return {
+      standardsCount: standardIds.length,
+      proceduresCount,
+    };
+  };
+
+  const getStandardProgress = (standardId: string) => {
+    const related = procedures.filter((p: any) => p.standardId === standardId);
+    if (related.length === 0) return 0;
+
+    const completed = related.filter((p: any) => p.status === 'completed').length;
+    return Math.round((completed / related.length) * 100);
+  };
+
+  const getPolicyProgress = (policyId: string) => {
+    const standardIds = getStandardIdsForPolicy(policyId);
+
+    const related = procedures.filter((p: any) =>
+      p.policyId === policyId || standardIds.includes(p.standardId)
+    );
+
+    if (related.length === 0) return 0;
+
+    const completed = related.filter((p: any) => p.status === 'completed').length;
+    return Math.round((completed / related.length) * 100);
   };
 
   const openEditPolicy = (policy: Policy) => {
@@ -107,6 +169,7 @@ export default function PoliciesPage() {
     }
 
     const existing = editingPolicyId ? policies.find(p => p.id === editingPolicyId) : null;
+
     const policy: Policy = {
       id: existing?.id || Math.random().toString(36).substr(2, 9),
       nameAr: newPolicy.nameAr || '',
@@ -124,6 +187,7 @@ export default function PoliciesPage() {
       } else {
         await policiesApi.createPolicy(policy);
       }
+
       await loadData();
       closePolicyDialog();
       toast.success(existing ? t('policy_updated_success') || t('policy_added_success') : t('policy_added_success'));
@@ -132,7 +196,7 @@ export default function PoliciesPage() {
     }
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItem.nameAr || !newItem.nameEn) {
       toast.error(t('fill_required_fields'));
       return;
@@ -152,27 +216,32 @@ export default function PoliciesPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    mockService.savePolicyItem(item);
-    setIsAddItemDialogOpen(false);
-    setNewItem({
-      nameAr: '',
-      nameEn: '',
-      descriptionAr: '',
-      descriptionEn: '',
-      order: 0
-    });
-    toast.success(t('policy_item_added_success'));
+    try {
+      await policyItemsApi.createPolicyItem(item);
+      await loadData();
+      setIsAddItemDialogOpen(false);
+      setNewItem({
+        nameAr: '',
+        nameEn: '',
+        descriptionAr: '',
+        descriptionEn: '',
+        order: 0
+      });
+      toast.success(t('policy_item_added_success'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Policy item could not be saved');
+    }
   };
 
   const handleDelete = (id: string) => {
-    const policyStandards = standards.filter(s => s.policyId === id);
-    const policyProcedures = procedures.filter(p => p.policyId === id);
-    
+    const policyStandards = standards.filter((s: any) => s.policyId === id || getStandardIdsForPolicy(id).includes(s.id));
+    const policyProcedures = procedures.filter((p: any) => p.policyId === id || getStandardIdsForPolicy(id).includes(p.standardId));
+
     if (policyStandards.length > 0 || policyProcedures.length > 0) {
       toast.error(t('cannot_delete_policy_dependencies') || 'Cannot delete policy because it has associated standards or procedures');
       return;
     }
-    
+
     setIdToDelete(id);
     setIsDeleteConfirmOpen(true);
   };
@@ -265,8 +334,8 @@ export default function PoliciesPage() {
     switch (key) {
       case 'name': return isRtl ? p.nameAr : p.nameEn;
       case 'framework': return (frameworks.find(f => f.id === p.frameworkId)?.[isRtl ? 'nameAr' : 'nameEn']) || '';
-      case 'progress': return mockService.getPolicyProgress(p.id);
-      case 'status': return mockService.getPolicyProgress(p.id);
+      case 'progress': return getPolicyProgress(p.id);
+      case 'status': return getPolicyProgress(p.id);
       default: return '';
     }
   });
@@ -298,10 +367,10 @@ export default function PoliciesPage() {
               { header: isRtl ? 'الاسم بالعربي' : 'Name (Arabic)', accessor: (p: any) => p.nameAr },
               { header: isRtl ? 'الاسم بالإنجليزي' : 'Name (English)', accessor: (p: any) => p.nameEn },
               { header: isRtl ? 'إطار العمل' : 'Framework', accessor: (p: any) => frameworks.find(f => f.id === p.frameworkId)?.[isRtl ? 'nameAr' : 'nameEn'] || '' },
-              { header: isRtl ? 'البنود' : 'Items', accessor: (p: any) => mockService.getPolicyItems(p.id).length },
-              { header: isRtl ? 'المعايير' : 'Standards', accessor: (p: any) => mockService.getPolicyStats(p.id).standardsCount },
-              { header: isRtl ? 'الإجراءات' : 'Procedures', accessor: (p: any) => mockService.getPolicyStats(p.id).proceduresCount },
-              { header: isRtl ? 'نسبة الالتزام %' : 'Progress %', accessor: (p: any) => `${mockService.getPolicyProgress(p.id)}%` }
+              { header: isRtl ? 'البنود' : 'Items', accessor: (p: any) => getPolicyItemsForPolicy(p.id).length },
+              { header: isRtl ? 'المعايير' : 'Standards', accessor: (p: any) => getPolicyStats(p.id).standardsCount },
+              { header: isRtl ? 'الإجراءات' : 'Procedures', accessor: (p: any) => getPolicyStats(p.id).proceduresCount },
+              { header: isRtl ? 'نسبة الالتزام %' : 'Progress %', accessor: (p: any) => `${getPolicyProgress(p.id)}%` }
             ]}
           />
           {can('policies.import') && (
@@ -329,27 +398,27 @@ export default function PoliciesPage() {
               <div className="grid gap-5 py-4">
                 <div className="grid gap-2">
                   <label className="text-[13px] font-bold text-text-main">{t('name_ar')} <span className="text-red-500">*</span></label>
-                  <Input 
-                    value={newPolicy.nameAr || ''} 
-                    onChange={e => setNewPolicy({...newPolicy, nameAr: e.target.value})}
+                  <Input
+                    value={newPolicy.nameAr || ''}
+                    onChange={e => setNewPolicy({ ...newPolicy, nameAr: e.target.value })}
                     placeholder="مثال: سياسة الأمن السيبراني"
                     className="rounded-lg border-border-subtle h-11"
                   />
                 </div>
                 <div className="grid gap-2">
                   <label className="text-[13px] font-bold text-text-main">{t('name_en')} <span className="text-red-500">*</span></label>
-                  <Input 
-                    value={newPolicy.nameEn || ''} 
-                    onChange={e => setNewPolicy({...newPolicy, nameEn: e.target.value})}
+                  <Input
+                    value={newPolicy.nameEn || ''}
+                    onChange={e => setNewPolicy({ ...newPolicy, nameEn: e.target.value })}
                     placeholder="Example: Cybersecurity Policy"
                     className="rounded-lg border-border-subtle h-11"
                   />
                 </div>
                 <div className="grid gap-2">
                   <label className="text-[13px] font-bold text-text-main">{t('framework')} <span className="text-red-500">*</span></label>
-                  <Select 
-                    value={newPolicy.frameworkId || ''} 
-                    onValueChange={v => setNewPolicy({...newPolicy, frameworkId: v})}
+                  <Select
+                    value={newPolicy.frameworkId || ''}
+                    onValueChange={v => setNewPolicy({ ...newPolicy, frameworkId: v ?? undefined })}
                   >
                     <SelectTrigger className="rounded-lg border-border-subtle h-11">
                       <SelectValue placeholder={t('select_framework')}>
@@ -382,9 +451,9 @@ export default function PoliciesPage() {
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                className="pl-10 rounded-lg border-border-subtle bg-slate-50/50 h-11" 
-                placeholder={t('search')} 
+              <Input
+                className="pl-10 rounded-lg border-border-subtle bg-slate-50/50 h-11"
+                placeholder={t('search')}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
@@ -408,6 +477,7 @@ export default function PoliciesPage() {
             </Select>
           </div>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -421,12 +491,13 @@ export default function PoliciesPage() {
             <tbody>
               {sortedPolicies.length > 0 ? (
                 pagedPolicies.map((policy: any) => {
-                  const progress = mockService.getPolicyProgress(policy.id);
-                  const stats = mockService.getPolicyStats(policy.id);
-                  const itemsCount = mockService.getPolicyItems(policy.id).length;
+                  const progress = getPolicyProgress(policy.id);
+                  const stats = getPolicyStats(policy.id);
+                  const itemsCount = getPolicyItemsForPolicy(policy.id).length;
+
                   return (
-                    <motion.tr 
-                      key={policy.id} 
+                    <motion.tr
+                      key={policy.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="hover:bg-slate-50/50 transition-colors group"
@@ -443,7 +514,6 @@ export default function PoliciesPage() {
                               type="button"
                               onClick={() => setDetailDialog({ type: 'items', policy })}
                               className="flex items-center gap-1.5 px-2 py-0.5 bg-violet-50/50 hover:bg-violet-100 rounded-md border border-violet-100/50 hover:border-violet-300 transition-colors cursor-pointer"
-                              title={isRtl ? 'عرض البنود' : 'View items'}
                             >
                               <FileText className="w-3 h-3 text-violet-500" />
                               <span className="text-[10px] font-mono font-bold text-violet-600 uppercase tracking-tighter">
@@ -454,7 +524,6 @@ export default function PoliciesPage() {
                               type="button"
                               onClick={() => setDetailDialog({ type: 'standards', policy })}
                               className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50/50 hover:bg-blue-100 rounded-md border border-blue-100/50 hover:border-blue-300 transition-colors cursor-pointer"
-                              title={isRtl ? 'عرض المعايير' : 'View standards'}
                             >
                               <FileText className="w-3 h-3 text-blue-500" />
                               <span className="text-[10px] font-mono font-bold text-blue-600 uppercase tracking-tighter">
@@ -465,7 +534,6 @@ export default function PoliciesPage() {
                               type="button"
                               onClick={() => setDetailDialog({ type: 'procedures', policy })}
                               className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50/50 hover:bg-emerald-100 rounded-md border border-emerald-100/50 hover:border-emerald-300 transition-colors cursor-pointer"
-                              title={isRtl ? 'عرض الإجراءات' : 'View procedures'}
                             >
                               <Activity className="w-3 h-3 text-emerald-500" />
                               <span className="text-[10px] font-mono font-bold text-emerald-600 uppercase tracking-tighter">
@@ -483,7 +551,7 @@ export default function PoliciesPage() {
                       <td>
                         <div className="flex items-center gap-3">
                           <div className="w-24 h-1.5 bg-border-subtle rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className={cn("h-full transition-all duration-500", progress === 100 ? "bg-emerald-500" : "bg-primary")}
                               style={{ width: `${progress}%` }}
                             ></div>
@@ -533,7 +601,7 @@ export default function PoliciesPage() {
                     </motion.tr>
                   );
                 })
-            ) : (
+              ) : (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-text-muted font-medium">
                     {t('no_data')}
@@ -543,6 +611,7 @@ export default function PoliciesPage() {
             </tbody>
           </table>
         </div>
+
         <Pagination
           total={sortedPolicies.length}
           page={page}
@@ -552,7 +621,6 @@ export default function PoliciesPage() {
         />
       </div>
 
-      {/* Quick Add Policy Item Dialog */}
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="sm:max-w-[500px] rounded-xl border-none shadow-2xl">
           <DialogHeader>
@@ -561,37 +629,19 @@ export default function PoliciesPage() {
           <div className="grid gap-5 py-4">
             <div className="grid gap-2">
               <label className="text-[13px] font-bold text-text-main">{t('name_ar')} <span className="text-red-500">*</span></label>
-              <Input 
-                value={newItem.nameAr} 
-                onChange={e => setNewItem({...newItem, nameAr: e.target.value})}
-                placeholder="مثال: البند الأول: إدارة الأصول"
-                className="rounded-lg border-border-subtle h-11"
-              />
+              <Input value={newItem.nameAr} onChange={e => setNewItem({ ...newItem, nameAr: e.target.value })} className="rounded-lg border-border-subtle h-11" />
             </div>
             <div className="grid gap-2">
               <label className="text-[13px] font-bold text-text-main">{t('name_en')} <span className="text-red-500">*</span></label>
-              <Input 
-                value={newItem.nameEn} 
-                onChange={e => setNewItem({...newItem, nameEn: e.target.value})}
-                placeholder="Example: Item 1: Asset Management"
-                className="rounded-lg border-border-subtle h-11"
-              />
+              <Input value={newItem.nameEn} onChange={e => setNewItem({ ...newItem, nameEn: e.target.value })} className="rounded-lg border-border-subtle h-11" />
             </div>
             <div className="grid gap-2">
               <label className="text-[13px] font-bold text-text-main">{t('description_ar')}</label>
-              <Input 
-                value={newItem.descriptionAr} 
-                onChange={e => setNewItem({...newItem, descriptionAr: e.target.value})}
-                className="rounded-lg border-border-subtle h-11"
-              />
+              <Input value={newItem.descriptionAr} onChange={e => setNewItem({ ...newItem, descriptionAr: e.target.value })} className="rounded-lg border-border-subtle h-11" />
             </div>
             <div className="grid gap-2">
               <label className="text-[13px] font-bold text-text-main">{t('description_en')}</label>
-              <Input 
-                value={newItem.descriptionEn} 
-                onChange={e => setNewItem({...newItem, descriptionEn: e.target.value})}
-                className="rounded-lg border-border-subtle h-11"
-              />
+              <Input value={newItem.descriptionEn} onChange={e => setNewItem({ ...newItem, descriptionEn: e.target.value })} className="rounded-lg border-border-subtle h-11" />
             </div>
           </div>
           <DialogFooter className="gap-3">
@@ -601,7 +651,6 @@ export default function PoliciesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -626,16 +675,16 @@ export default function PoliciesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Policy detail popup — lists items / standards / procedures for the selected policy. */}
       <Dialog open={!!detailDialog} onOpenChange={(v) => { if (!v) setDetailDialog(null); }}>
         <DialogContent className="sm:max-w-[640px] max-h-[80vh] overflow-hidden flex flex-col rounded-2xl border-none shadow-2xl" dir={isRtl ? 'rtl' : 'ltr'}>
           {detailDialog && (() => {
             const { type, policy } = detailDialog;
             const policyName = isRtl ? policy.nameAr : policy.nameEn;
-            const items = type === 'items' ? mockService.getPolicyItems(policy.id) : [];
-            const polStandardIds = mockService._standardsInPolicy(policy.id);
+            const items = type === 'items' ? getPolicyItemsForPolicy(policy.id) : [];
+            const polStandardIds = getStandardIdsForPolicy(policy.id);
             const stdsList = type === 'standards' ? standards.filter(s => polStandardIds.includes(s.id)) : [];
-            const procsList = type === 'procedures' ? procedures.filter(p => polStandardIds.includes(p.standardId)) : [];
+            const procsList = type === 'procedures' ? procedures.filter((p: any) => polStandardIds.includes(p.standardId) || p.policyId === policy.id) : [];
+
             const config = {
               items: { title: isRtl ? 'البنود' : 'Items', color: 'violet', count: items.length },
               standards: { title: isRtl ? 'المعايير' : 'Standards', color: 'blue', count: stdsList.length },
@@ -679,7 +728,7 @@ export default function PoliciesPage() {
                   ) : type === 'standards' ? (
                     <ul className="divide-y divide-border-subtle">
                       {stdsList.map(s => {
-                        const sProgress = mockService.getStandardProgress(s.id);
+                        const sProgress = getStandardProgress(s.id);
                         return (
                           <li key={s.id} className="py-3 px-2 hover:bg-slate-50/60 rounded-lg">
                             <div className="flex items-center justify-between gap-3">

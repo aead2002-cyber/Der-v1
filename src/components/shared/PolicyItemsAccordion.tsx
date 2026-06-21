@@ -1,8 +1,9 @@
 import React from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Edit2, Trash2, Plus, Link2, Shield, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { mockService, getStandardItemIds } from '@/services/mockService';
-import { PolicyItem, Policy, Framework, Standard } from '@/types';
+import { getStandardItemIds } from '@/lib/progressHelpers';
+import { getPolicyItemProgress } from '@/lib/progressHelpers';
+import { PolicyItem, Policy, Framework, Standard, Procedure } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface AccordionViewProps {
@@ -16,6 +17,7 @@ interface AccordionViewProps {
   policies: Policy[];
   frameworks: Framework[];
   standards: Standard[];
+  procedures: Procedure[];
   getPolicyName: (id: string) => string;
   navigate: (to: string) => void;
   handleDelete: (id: string) => void;
@@ -38,6 +40,7 @@ function ItemNode({
   policies,
   frameworks,
   standards,
+  procedures,
   getPolicyName,
   navigate,
   handleDelete,
@@ -51,7 +54,7 @@ function ItemNode({
   const hasChildren = children.length > 0;
   const isOpen = expandedIds.has(item.id);
   const code = itemCodes.get(item.id) || '';
-  const progress = mockService.getPolicyItemProgress(item.id);
+  const progress = getPolicyItemProgress(item.id, standards, procedures);
   const stdCount = standards.filter(s => getStandardItemIds(s).includes(item.id)).length;
 
   const policy = policies.find(p => p.id === item.policyId);
@@ -190,6 +193,7 @@ function ItemNode({
                 policies,
                 frameworks,
                 standards,
+                procedures,
                 getPolicyName,
                 navigate,
                 handleDelete,

@@ -16,6 +16,7 @@ import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
 import { usersApi } from '@/services/usersApi';
+import { getProcedureEffectiveWeight } from '@/lib/progressHelpers';
 import { Procedure, Policy, Standard, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { AttachmentsField } from './AttachmentsField';
@@ -183,7 +184,7 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
 
   const allProcs = open ? allProcedures : [];
   const hasChildren = !!procedureId && allProcs.some(p => p.parentId === procedureId);
-  const computedParentWeight = hasChildren ? mockService.getProcedureEffectiveWeight(procedureId!, allProcs) : 0;
+  const computedParentWeight = hasChildren ? getProcedureEffectiveWeight(procedureId!, allProcs) : 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>

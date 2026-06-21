@@ -24,7 +24,6 @@ import {
   DialogTitle, 
   DialogFooter 
 } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
 import { evidenceApi } from '@/services/evidenceApi';
 import { filesApi, isBackendFileUrl, resolveFileUrl } from '@/services/filesApi';
 import { proceduresApi } from '@/services/proceduresApi';
