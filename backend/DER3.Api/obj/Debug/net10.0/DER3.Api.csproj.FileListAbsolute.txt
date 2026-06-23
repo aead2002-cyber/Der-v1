@@ -877,3 +877,9 @@ D:\Der-v1\backend\DER3.Api\bin\codex-public-verify\runtimes\win\lib\net9.0\Micro
 D:\Der-v1\backend\DER3.Api\bin\codex-public-verify\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
 D:\Der-v1\backend\DER3.Api\bin\codex-public-verify\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 D:\Der-v1\backend\DER3.Api\bin\codex-public-verify\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
+D:\Der-v1\backend\DER3.Api\bin\Debug\net10.0\publish\web.config
+D:\Der-v1\backend\DER3.Api\bin\Debug\net10.0\publish\appsettings.Development.json
+D:\Der-v1\backend\DER3.Api\bin\Debug\net10.0\publish\appsettings.json
+D:\Der-v1\backend\DER3.Api\bin\Debug\net10.0\publish\DER3.Api.deps.json
+D:\Der-v1\backend\DER3.Api\bin\Debug\net10.0\publish\DER3.Api.runtimeconfig.json
+D:\Der-v1\backend\DER3.Api\bin\Debug\net10.0\publish\DER3.Api.staticwebassets.endpoints.json
