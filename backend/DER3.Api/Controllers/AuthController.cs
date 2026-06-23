@@ -16,10 +16,12 @@ namespace DER3.Api.Controllers
         private const string InvalidCredentialsMessage = "Invalid email or password";
         private const string InvalidOtpMessage = "Invalid or expired OTP";
         private readonly IOtpService _otpService;
+        private readonly IPasswordResetService _passwordResetService;
 
-        public AuthController(IOtpService otpService)
+        public AuthController(IOtpService otpService, IPasswordResetService passwordResetService)
         {
             _otpService = otpService;
+            _passwordResetService = passwordResetService;
         }
 
         [HttpPost("verify")]
@@ -112,6 +114,49 @@ namespace DER3.Api.Controllers
             {
                 return StatusCode(500, new { ok = false, error = "JWT service is not configured" });
             }
+        }
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword(
+            [FromBody] ForgotPasswordRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(new { success = false, error = "Email is required" });
+            }
+
+            await _passwordResetService.RequestPasswordResetAsync(request.Email, cancellationToken);
+            return Ok(new { success = true });
+        }
+
+        [HttpPost("verify-reset-token")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyResetToken(
+            [FromBody] VerifyResetTokenRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _passwordResetService.VerifyResetTokenAsync(request.Token ?? string.Empty, cancellationToken);
+            return result.Success
+                ? Ok(new { success = true, email = result.Email })
+                : Ok(new { success = false, error = result.Error ?? "Invalid or expired reset token" });
+        }
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword(
+            [FromBody] ResetPasswordRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _passwordResetService.ResetPasswordAsync(
+                request.Token ?? string.Empty,
+                request.NewPassword ?? string.Empty,
+                cancellationToken);
+
+            return result.Success
+                ? Ok(new { success = true })
+                : Ok(new { success = false, error = result.Error ?? "Invalid or expired reset token" });
         }
 
         [Authorize]

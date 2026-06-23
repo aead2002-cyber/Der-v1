@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { resolveAttachmentUrl } from '@/services/mockService';
+import { resolveAttachmentUrl } from '@/lib/backendFileHelpers';
 import { usersApi } from '@/services/usersApi';
 import { User } from '@/types';
 import { cn } from '@/lib/utils';

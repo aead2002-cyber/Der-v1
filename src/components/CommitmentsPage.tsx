@@ -39,10 +39,11 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
 import { commitmentsApi } from '@/services/commitmentsApi';
 import { filesApi } from '@/services/filesApi';
 import { usersApi } from '@/services/usersApi';
+import { getNotificationSettings } from '@/lib/notificationSettingsStore';
+import { dispatchNotification } from '@/lib/notificationDispatcher';
 import { Commitment, User } from '@/types';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -152,9 +153,9 @@ export default function CommitmentsPage() {
 
     // Add Notification if enabled
     if (commitment.responsibleUser) {
-      const settings = mockService.getNotificationSettings();
+      const settings = getNotificationSettings();
       if (settings.notifyOnAssignment) {
-        mockService.addNotification({
+        await dispatchNotification({
           userId: commitment.responsibleUser,
           titleAr: 'إسناد التزام جديد',
           titleEn: 'New Commitment Assigned',

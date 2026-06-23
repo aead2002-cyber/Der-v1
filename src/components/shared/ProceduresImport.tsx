@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Upload, Download, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { mockService } from '@/services/mockService';
 import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';

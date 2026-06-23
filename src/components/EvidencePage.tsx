@@ -432,7 +432,7 @@ export default function EvidencePage() {
                     className="rounded-lg border-border-subtle h-11 pl-10"
                   />
                 </div>
-                <p className="text-[11px] text-text-muted">{t('file_url_hint') || 'In this demo, please provide a link to the file.'}</p>
+                <p className="text-[11px] text-text-muted">{t('file_url_hint') || 'Please provide a link to the file.'}</p>
               </div>
             ) : (
               <div className="grid gap-2">

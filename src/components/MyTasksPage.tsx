@@ -3050,7 +3050,7 @@ export default function MyTasksPage() {
                       className="rounded-xl border-slate-200 h-12 pl-10 focus:ring-blue-600"
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400 font-medium">{isRtl ? 'في هذه النسخة التجريبية، يرجى تقديم رابط للملف.' : 'In this demo, please provide a link to the file.'}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{isRtl ? 'في هذه النسخة التجريبية، يرجى تقديم رابط للملف.' : 'Please provide a link to the file.'}</p>
                 </div>
               ) : (
                 <div className="grid gap-2">

@@ -12,7 +12,7 @@ interface DeleteResponse {
   error?: string;
 }
 
-type UserPayload = Pick<User, 'uid' | 'email' | 'displayName' | 'displayNameEn' | 'role' | 'groupId' | 'teams' | 'departments' | 'photoURL' | 'bypassOtp' | 'receiveSecurityIncidents'> & {
+type UserPayload = Pick<User, 'uid' | 'email' | 'displayName' | 'displayNameEn' | 'role' | 'groupId' | 'teams' | 'departments' | 'photoURL' | 'receiveSecurityIncidents'> & {
   permissionOverrides?: User['permissionOverrides'];
 };
 
@@ -93,7 +93,6 @@ const normalizeUser = (value: unknown): User => {
     teams: stringArrayValue(item.teams),
     departments: stringArrayValue(item.departments),
     photoURL: optionalStringValue(item.photoURL),
-    bypassOtp: booleanValue(item.bypassOtp),
     receiveSecurityIncidents: booleanValue(item.receiveSecurityIncidents),
   };
 };

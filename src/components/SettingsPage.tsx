@@ -23,17 +23,19 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { 
   Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { mockService, uploadFile, resolveAttachmentUrl, apiUrl } from '@/services/mockService';
+import { uploadFile, resolveAttachmentUrl, apiUrl } from '@/lib/backendFileHelpers';
 import { departmentsApi } from '@/services/departmentsApi';
 import { teamsApi } from '@/services/teamsApi';
 import { lookupOptionsApi } from '@/services/lookupOptionsApi';
 import { notificationTemplatesApi } from '@/services/notificationTemplatesApi';
 import { Team, Department, NotificationSettings, EmailSettings, NotificationTemplate, ComplianceSettings, LookupOption } from '@/types';
+import { getComplianceSettings, saveComplianceSettings } from '@/lib/complianceSettingsStore';
+import { getNotificationSettings, saveNotificationSettings } from '@/lib/notificationSettingsStore';
 import { PermissionGroupsManager } from './PermissionGroupsManager';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -112,13 +114,9 @@ export default function SettingsPage() {
     refreshDepartments();
     refreshTeams();
     refreshLookupOptions();
-    setNotifSettings(mockService.getNotificationSettings());
-    const stored: any = { ...mockService.getEmailSettings() };
-    delete stored.smtpUser;
-    delete stored.smtpPassword;
-    setEmailSettings(stored);
+    setNotifSettings(getNotificationSettings());
     refreshNotificationTemplates();
-    setComplianceSettings(mockService.getComplianceSettings());
+    setComplianceSettings(getComplianceSettings());
   }, []);
 
   const refreshDepartments = async () => {
@@ -151,11 +149,6 @@ export default function SettingsPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر تحميل قوالب الإشعارات' : 'Failed to load notification templates'));
     }
-  };
-
-  const handleSaveEmailSettings = () => {
-    mockService.saveEmailSettings(emailSettings);
-    toast.success(t('email_settings_saved'));
   };
 
   const handleTestSmtp = async () => {
@@ -194,7 +187,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveComplianceSettings = () => {
-    mockService.saveComplianceSettings(complianceSettings);
+    saveComplianceSettings(complianceSettings);
     toast.success(t('compliance_saved_success'));
   };
 
@@ -228,7 +221,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveNotifSettings = () => {
-    mockService.saveNotificationSettings(notifSettings);
+    saveNotificationSettings(notifSettings);
     toast.success(t('notification_settings_saved') || 'Notification settings saved successfully');
   };
 
@@ -658,13 +651,17 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900">
+                  Email settings are managed from backend configuration.
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-text-muted uppercase">{t('smtp_server')} <span className="text-red-500">*</span></label>
                     <Input 
                       value={emailSettings.smtpServer}
-                      onChange={e => setEmailSettings({...emailSettings, smtpServer: e.target.value})}
                       placeholder="smtp.example.com"
+                      disabled
                       className="rounded-xl border-border-subtle h-11"
                     />
                   </div>
@@ -673,8 +670,8 @@ export default function SettingsPage() {
                     <Input 
                       type="number"
                       value={emailSettings.smtpPort}
-                      onChange={e => setEmailSettings({...emailSettings, smtpPort: parseInt(e.target.value) || 0})}
                       placeholder="587"
+                      disabled
                       className="rounded-xl border-border-subtle h-11"
                     />
                   </div>
@@ -682,8 +679,8 @@ export default function SettingsPage() {
                     <label className="text-xs font-bold text-text-muted uppercase">{t('sender_email')} <span className="text-red-500">*</span></label>
                     <Input 
                       value={emailSettings.senderEmail}
-                      onChange={e => setEmailSettings({...emailSettings, senderEmail: e.target.value})}
                       placeholder="no-reply@der3.com"
+                      disabled
                       className="rounded-xl border-border-subtle h-11"
                     />
                   </div>
@@ -691,8 +688,8 @@ export default function SettingsPage() {
                     <label className="text-xs font-bold text-text-muted uppercase">{t('sender_name')}</label>
                     <Input 
                       value={emailSettings.senderName}
-                      onChange={e => setEmailSettings({...emailSettings, senderName: e.target.value})}
                       placeholder="DER3 System"
+                      disabled
                       className="rounded-xl border-border-subtle h-11"
                     />
                   </div>
@@ -700,7 +697,7 @@ export default function SettingsPage() {
                     <label className="text-xs font-bold text-text-muted uppercase">{t('encryption')}</label>
                     <Select 
                       value={emailSettings.encryption}
-                      onValueChange={(val: any) => setEmailSettings({...emailSettings, encryption: val})}
+                      disabled
                     >
                       <SelectTrigger className="rounded-xl border-border-subtle h-11">
                         <SelectValue placeholder={t('encryption')}>
@@ -717,10 +714,6 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="pt-4 flex items-center gap-3">
-                  <Button onClick={handleSaveEmailSettings} className="bg-primary hover:bg-primary/90 text-white font-bold h-11 px-8 rounded-xl shadow-lg shadow-blue-600/20">
-                    <Save className="w-4 h-4 mr-2" />
-                    {t('save_settings')}
-                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => setIsTestMailDialogOpen(true)}

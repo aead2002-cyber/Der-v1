@@ -95,7 +95,7 @@ export default function PlatformPortalPage() {
           />
           <PlatformCard
             title="Rased"
-            description={isRtl ? 'عرض توضيحي بسيط للمنصة' : 'Simple demo placeholder for the platform'}
+            description={isRtl ? 'عرض توضيحي بسيط للمنصة' : 'Platform placeholder'}
             allowed={rasedAllowed}
             platform="RASED"
             variant="rased"

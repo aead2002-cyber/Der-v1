@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { uploadFile, resolveAttachmentUrl } from '@/lib/backendFileHelpers';
 import { usersApi } from '@/services/usersApi';
 import { teamsApi } from '@/services/teamsApi';
 import { departmentsApi } from '@/services/departmentsApi';
@@ -123,7 +123,6 @@ export default function AddUserPage() {
       teams: formData.teams || [],
       departments: formData.departments || [],
       photoURL: formData.photoURL,
-      bypassOtp: formData.bypassOtp,
       receiveSecurityIncidents: formData.receiveSecurityIncidents
     };
 

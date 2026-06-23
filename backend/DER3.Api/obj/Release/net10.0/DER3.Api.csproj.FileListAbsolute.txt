@@ -162,3 +162,9 @@ D:\Der-v1\backend\DER3.Api\obj\Release\net10.0\refint\DER3.Api.dll
 D:\Der-v1\backend\DER3.Api\obj\Release\net10.0\DER3.Api.pdb
 D:\Der-v1\backend\DER3.Api\obj\Release\net10.0\DER3.Api.genruntimeconfig.cache
 D:\Der-v1\backend\DER3.Api\obj\Release\net10.0\ref\DER3.Api.dll
+D:\Der-v1\backend\DER3.Api\bin\Release\net10.0\publish\web.config
+D:\Der-v1\backend\DER3.Api\bin\Release\net10.0\publish\appsettings.Development.json
+D:\Der-v1\backend\DER3.Api\bin\Release\net10.0\publish\appsettings.json
+D:\Der-v1\backend\DER3.Api\bin\Release\net10.0\publish\DER3.Api.deps.json
+D:\Der-v1\backend\DER3.Api\bin\Release\net10.0\publish\DER3.Api.runtimeconfig.json
+D:\Der-v1\backend\DER3.Api\bin\Release\net10.0\publish\DER3.Api.staticwebassets.endpoints.json

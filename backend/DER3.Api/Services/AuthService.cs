@@ -18,7 +18,6 @@ namespace DER3.Api.Services
 
     public sealed class AuthService : IAuthService
     {
-        private const string TemporaryUnsafeDefaultPassword = "password123";
         private readonly IUserRepository _userRepository;
 
         public AuthService(IUserRepository userRepository)
@@ -37,16 +36,12 @@ namespace DER3.Api.Services
             var hasHash = !string.IsNullOrEmpty(user.PasswordHash);
             var hasSalt = !string.IsNullOrEmpty(user.PasswordSalt);
 
-            bool passwordIsValid;
             if (!hasHash || !hasSalt)
             {
-                // Temporary compatibility with the old Node backend. This is unsafe and must be removed with JWT/auth hardening.
-                passwordIsValid = password == TemporaryUnsafeDefaultPassword;
+                return null;
             }
-            else
-            {
-                passwordIsValid = VerifyPasswordHash(password, user.PasswordSalt!, user.PasswordHash!);
-            }
+
+            var passwordIsValid = VerifyPasswordHash(password, user.PasswordSalt!, user.PasswordHash!);
 
             return passwordIsValid
                 ? new AuthenticatedUser(user.Uid, user.Email, user.DisplayName, user.Role, user.User)

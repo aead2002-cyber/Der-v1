@@ -11,12 +11,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
 import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
 import { usersApi } from '@/services/usersApi';
 import { getProcedureEffectiveWeight } from '@/lib/progressHelpers';
+import { dispatchNotification } from '@/lib/notificationDispatcher';
+import { getNotificationSettings } from '@/lib/notificationSettingsStore';
 import { Procedure, Policy, Standard, User as UserType } from '@/types';
 import { toast } from 'sonner';
 import { AttachmentsField } from './AttachmentsField';
@@ -156,10 +157,10 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
       return;
     }
 
-    const settings = mockService.getNotificationSettings();
+    const settings = getNotificationSettings();
     if (settings.notifyOnAssignment) {
-      formData.assignedTo.forEach(userId => {
-        mockService.addNotification({
+      for (const userId of formData.assignedTo) {
+        await dispatchNotification({
           userId,
           titleAr: 'إسناد إجراء جديد',
           titleEn: 'New Procedure Assigned',
@@ -168,7 +169,7 @@ export function ProcedureFormDialog({ open, procedureId, parentId, onSaved, onCl
           type: 'procedure_assignment',
           link: '/tasks',
         });
-      });
+      }
     }
 
     toast.success(

@@ -24,6 +24,8 @@ namespace DER3.Api.Services
     {
         Task SendOtpAsync(string recipientEmail, string otp, CancellationToken cancellationToken);
 
+        Task SendPasswordResetAsync(string recipientEmail, string resetLink, CancellationToken cancellationToken);
+
         Task<SmtpDiagnosticsResult> TestSmtpAsync(CancellationToken cancellationToken);
     }
 
@@ -57,6 +59,45 @@ namespace DER3.Api.Services
                 From = new MailAddress(fromEmail, string.IsNullOrWhiteSpace(fromName) ? fromEmail : fromName),
                 Subject = "DER3 login verification code",
                 Body = $"Your DER3 verification code is {otp}. This code expires in 5 minutes.",
+                IsBodyHtml = false
+            };
+            message.To.Add(recipientEmail);
+
+            using var client = new SmtpClient(host, port)
+            {
+                EnableSsl = enableSsl,
+                Timeout = SmtpTimeoutMilliseconds
+            };
+
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                client.Credentials = new NetworkCredential(username, password);
+            }
+
+            using var registration = cancellationToken.Register(client.SendAsyncCancel);
+            await client.SendMailAsync(message, cancellationToken);
+        }
+
+        public async Task SendPasswordResetAsync(string recipientEmail, string resetLink, CancellationToken cancellationToken)
+        {
+            var host = _configuration["Smtp:Host"];
+            var fromEmail = _configuration["Smtp:FromEmail"];
+            var fromName = _configuration["Smtp:FromName"];
+            var username = _configuration["Smtp:Username"];
+            var password = _configuration["Smtp:Password"];
+            var port = _configuration.GetValue<int?>("Smtp:Port") ?? 587;
+            var enableSsl = _configuration.GetValue<bool?>("Smtp:EnableSsl") ?? true;
+
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromEmail))
+            {
+                throw new InvalidOperationException("SMTP settings are not configured.");
+            }
+
+            using var message = new MailMessage
+            {
+                From = new MailAddress(fromEmail, string.IsNullOrWhiteSpace(fromName) ? fromEmail : fromName),
+                Subject = "DER3 password reset request",
+                Body = $"Use this link to reset your password (valid for 30 minutes): {resetLink}",
                 IsBodyHtml = false
             };
             message.To.Add(recipientEmail);

@@ -59,13 +59,14 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
-import { mockService } from '@/services/mockService';
 import { filesApi, resolveFileUrl } from '@/services/filesApi';
 import { incidentFeedbackApi } from '@/services/incidentFeedbackApi';
 import { incidentNotesApi } from '@/services/incidentNotesApi';
 import { incidentsApi } from '@/services/incidentsApi';
 import { lookupOptionsApi } from '@/services/lookupOptionsApi';
 import { usersApi } from '@/services/usersApi';
+import { getNotificationSettings } from '@/lib/notificationSettingsStore';
+import { dispatchNotification } from '@/lib/notificationDispatcher';
 import { SecurityIncident, User, IncidentFeedback, IncidentNote, LookupOption } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -159,9 +160,9 @@ const IncidentsPage: React.FC = () => {
       await incidentsApi.updateIncident(updated.id, updated);
     
     // Add Notification if enabled
-    const settings = mockService.getNotificationSettings();
+    const settings = getNotificationSettings();
     if (settings.notifyOnAssignment) {
-      mockService.addNotification({
+      await dispatchNotification({
         userId: assignUserId,
         titleAr: 'إسناد بلاغ جديد',
         titleEn: 'New Incident Assigned',
@@ -222,9 +223,9 @@ const IncidentsPage: React.FC = () => {
       await incidentNotesApi.createIncidentNote(note);
 
       // Add Notification if enabled
-      const settings = mockService.getNotificationSettings();
+      const settings = getNotificationSettings();
       if (settings.notifyOnAssignment) {
-        mockService.addNotification({
+        await dispatchNotification({
           userId: normalizedAssignee,
           titleAr: 'إسناد بلاغ جديد',
           titleEn: 'New Incident Assigned',

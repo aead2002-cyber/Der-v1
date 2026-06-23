@@ -43,7 +43,7 @@ const resources = {
       "evidence_name_placeholder": "e.g., Screenshot of configuration",
       "evidence_desc_placeholder": "Briefly describe what this evidence proves...",
       "file_url": "File URL / Link",
-      "file_url_hint": "In this demo, please provide a link to the file.",
+      "file_url_hint": "Please provide a link to the file.",
       "evidence_added_success": "Evidence added successfully",
       "evidence_deleted_success": "Evidence deleted successfully",
       "confirm_delete_evidence": "Are you sure you want to delete this evidence?",

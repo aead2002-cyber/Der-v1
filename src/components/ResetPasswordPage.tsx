@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { mockService } from '@/services/mockService';
+import { resetPasswordApi } from '@/services/resetPasswordApi';
 import { motion } from 'motion/react';
 import { Logo } from './Logo';
 import { PasswordRulesList, isPasswordValid } from './shared/PasswordRules';
@@ -30,19 +30,23 @@ export default function ResetPasswordPage() {
   const isRtl = i18n.language === 'ar';
 
   useEffect(() => {
+    const verify = async () => {
     if (!token) {
       setError(isRtl ? 'رابط غير صالح' : 'Invalid link');
       setVerifying(false);
       return;
     }
 
-    const verifiedEmail = mockService.verifyResetToken(token);
-    if (verifiedEmail) {
-      setEmail(verifiedEmail);
+    const verified = await resetPasswordApi.verifyResetToken(token);
+    if (verified.success && verified.email) {
+      setEmail(verified.email);
     } else {
-      setError(isRtl ? 'انتهت صلاحية الرابط أو أنه غير صالح (صلاحية الرابط 10 دقائق)' : 'Link expired or invalid (Link is valid for 10 minutes)');
+      setError(isRtl ? 'انتهت صلاحية الرابط أو أنه غير صالح (صلاحية الرابط 10 دقائق)' : 'Link expired or invalid (Link is valid for 30 minutes)');
     }
     setVerifying(false);
+    };
+
+    void verify();
   }, [token, isRtl]);
 
   const handleReset = async (e: React.FormEvent) => {
@@ -58,8 +62,8 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const result = await mockService.completePasswordReset(token!, newPassword);
-      if (result) {
+      await resetPasswordApi.completePasswordReset(token!, newPassword);
+      if (true) {
         setSuccess(true);
         toast.success(isRtl ? 'تمت إعادة تعيين كلمة المرور بنجاح' : 'Password reset successful');
         setTimeout(() => navigate('/login'), 3000);
@@ -183,3 +187,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { mockService, resolveAttachmentUrl } from '../services/mockService';
+import { resolveAttachmentUrl } from '@/lib/backendFileHelpers';
 import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getComplianceSettings } from '@/lib/complianceSettingsStore';
 
 interface LogoProps {
   className?: string;
@@ -20,7 +21,7 @@ export const Logo: React.FC<LogoProps> = ({
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const settings = mockService.getComplianceSettings();
+    const settings = getComplianceSettings();
     // Priority: uploaded systemLogo → bundled brand asset in /public
     const raw = settings.systemLogo || '/logo-der3.png';
     setLogoUrl(resolveAttachmentUrl(raw) || raw);

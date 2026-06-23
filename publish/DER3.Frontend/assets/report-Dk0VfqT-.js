@@ -1,0 +1,1 @@
+import{cC as e,$ as t,r as o,cA as r,cB as s}from"./index-f4U0oroi.js";e.createRoot(document.getElementById("root")).render(t.jsxs(o.StrictMode,{children:[t.jsx(r,{}),t.jsx(s,{position:"top-center"})]}));

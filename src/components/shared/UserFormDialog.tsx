@@ -4,7 +4,7 @@ import { Save, X, Mail, User as UserIcon, Shield, Building2, Users as UsersIcon,
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { uploadFile, resolveAttachmentUrl } from '@/services/mockService';
+import { uploadFile, resolveAttachmentUrl } from '@/lib/backendFileHelpers';
 import { usersApi } from '@/services/usersApi';
 import { teamsApi } from '@/services/teamsApi';
 import { departmentsApi } from '@/services/departmentsApi';
@@ -112,7 +112,6 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
       teams: formData.teams || [],
       departments: formData.departments || [],
       photoURL: formData.photoURL,
-      bypassOtp: !!formData.bypassOtp,
       receiveSecurityIncidents: !!formData.receiveSecurityIncidents,
     };
     setSavingUser(true);
@@ -340,12 +339,12 @@ export function UserFormDialog({ open, userId, onSaved, onClose }: Props) {
               )}
             </div>
 
-            <div className="bg-white rounded-xl border border-border-subtle p-4 space-y-2">
+            <div className="hidden bg-white rounded-xl border border-border-subtle p-4 space-y-2">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={!!formData.bypassOtp}
-                  onChange={(e) => setFormData({ ...formData, bypassOtp: e.target.checked })}
+                  checked={false}
+                  onChange={() => {}}
                   className="mt-0.5 w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary"
                 />
                 <div className="flex-1">

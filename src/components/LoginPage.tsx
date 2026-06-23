@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { authApi } from '@/services/authApi';
+import { resetPasswordApi } from '@/services/resetPasswordApi';
 import { tokenStorage } from '@/services/tokenStorage';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -62,7 +63,10 @@ export default function LoginPage() {
     
     setIsResetLoading(true);
     try {
-      toast.error(isRtl ? 'Ø¥Ø¹Ø§Ø¯Ø© ØªØ¹ÙŠÙŠÙ† ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' : 'Password reset is not available yet');
+      await resetPasswordApi.forgotPassword(resetEmail);
+      toast.success(isRtl ? 'Êã ÅÑÓÇá ÑÇÈØ ÅÚÇÏÉ ÇáÊÚííä Åáì ÈÑíÏß ÇáÅáßÊÑæäí' : 'Password reset link sent to your email');
+      setIsForgotPassOpen(false);
+      setResetEmail('');
     } catch (error) {
       toast.error(isRtl ? 'ÙØ´Ù„ ÙÙŠ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø§Ø¨Ø·' : 'Failed to send reset link');
     } finally {
@@ -301,3 +305,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

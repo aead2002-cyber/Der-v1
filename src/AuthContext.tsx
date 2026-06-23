@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from './types';
-import { mockService } from './services/mockService';
+import { hasPermission } from './lib/permissionHelpers';
 import { tokenStorage } from './services/tokenStorage';
 
 interface AuthContextType {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const can = (permission: string): boolean => mockService.hasPermission(user, permission);
+  const can = (permission: string): boolean => hasPermission(user, permission);
 
   return (
     <AuthContext.Provider value={{ user, loading, logout, updateProfile, can }}>

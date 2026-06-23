@@ -22,12 +22,13 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { mockService } from '@/services/mockService';
 import { proceduresApi } from '@/services/proceduresApi';
 import { policiesApi } from '@/services/policiesApi';
 import { standardsApi } from '@/services/standardsApi';
 import { usersApi } from '@/services/usersApi';
 import { Procedure, Policy, Standard, User as UserType } from '@/types';
+import { getNotificationSettings } from '@/lib/notificationSettingsStore';
+import { dispatchNotification } from '@/lib/notificationDispatcher';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AttachmentsField } from './shared/AttachmentsField';
@@ -155,10 +156,10 @@ export default function AddProcedurePage() {
     }
     
     // Add Notifications for each assigned user if enabled
-    const settings = mockService.getNotificationSettings();
+    const settings = getNotificationSettings();
     if (settings.notifyOnAssignment) {
-      formData.assignedTo.forEach(userId => {
-        mockService.addNotification({
+      await Promise.all(formData.assignedTo.map(userId =>
+        dispatchNotification({
           userId,
           titleAr: 'إسناد إجراء جديد',
           titleEn: 'New Procedure Assigned',
@@ -166,8 +167,8 @@ export default function AddProcedurePage() {
           messageEn: `A new procedure has been assigned to you: ${formData.nameEn}`,
           type: 'procedure_assignment',
           link: '/tasks'
-        });
-      });
+        })
+      ));
     }
 
     toast.success(id ? t('procedure_updated_success') || 'Procedure updated successfully' : t('procedure_added_success') || 'Procedure added successfully');
