@@ -73,7 +73,10 @@ namespace DER3.Api.Services
                     AbsoluteExpirationRelativeToNow = ResetTokenLifetime
                 });
 
-            var frontendBaseUrl = _configuration["Frontend:BaseUrl"]?.TrimEnd('/') ?? "http://10.10.12.117:3000";
+            var frontendBaseUrl =
+                _configuration["FrontendBaseUrl"]?.TrimEnd('/')
+                ?? _configuration["Frontend:BaseUrl"]?.TrimEnd('/')
+                ?? "http://10.10.12.117:3000";
             var resetLink = $"{frontendBaseUrl}/reset-password?token={token}";
 
             try
