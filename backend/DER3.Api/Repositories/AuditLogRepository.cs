@@ -14,7 +14,13 @@ namespace DER3.Api.Repositories
         string? NewValue,
         DateTime? Timestamp,
         string? Ip,
-        string? UserAgent);
+        string? UserAgent,
+        string? UserEmail = null,
+        string? DetailsJson = null,
+        string? BeforeJson = null,
+        string? AfterJson = null,
+        string? IpAddress = null,
+        DateTime? TimestampUtc = null);
 
     public interface IAuditLogRepository
     {
@@ -37,8 +43,8 @@ namespace DER3.Api.Repositories
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO AuditLog (id, userId, userName, action, entityType, entityId, oldValue, newValue, timestamp, ip, userAgent)
-                VALUES (@id, @userId, @userName, @action, @entityType, @entityId, @oldValue, @newValue, @timestamp, @ip, @userAgent)
+                INSERT INTO AuditLog (id, userId, userName, action, entityType, entityId, oldValue, newValue, timestamp, ip, userAgent, UserEmail, DetailsJson, BeforeJson, AfterJson, IpAddress, TimestampUtc)
+                VALUES (@id, @userId, @userName, @action, @entityType, @entityId, @oldValue, @newValue, @timestamp, @ip, @userAgent, @UserEmail, @DetailsJson, @BeforeJson, @AfterJson, @IpAddress, @TimestampUtc)
                 """;
 
             AddNVarChar(command, "@id", 64, auditLog.Id);
@@ -49,9 +55,15 @@ namespace DER3.Api.Repositories
             AddNVarChar(command, "@entityId", 64, auditLog.EntityId);
             AddNVarCharMax(command, "@oldValue", auditLog.OldValue);
             AddNVarCharMax(command, "@newValue", auditLog.NewValue);
-            AddDateTime(command, "@timestamp", auditLog.Timestamp);
+            AddDateTime(command, "@timestamp", auditLog.Timestamp ?? auditLog.TimestampUtc ?? DateTime.UtcNow);
             AddNVarChar(command, "@ip", 64, auditLog.Ip);
             AddNVarCharMax(command, "@userAgent", auditLog.UserAgent);
+            AddNVarChar(command, "@UserEmail", 256, auditLog.UserEmail);
+            AddNVarCharMax(command, "@DetailsJson", auditLog.DetailsJson);
+            AddNVarCharMax(command, "@BeforeJson", auditLog.BeforeJson);
+            AddNVarCharMax(command, "@AfterJson", auditLog.AfterJson);
+            AddNVarChar(command, "@IpAddress", 64, auditLog.IpAddress);
+            AddDateTime2(command, "@TimestampUtc", auditLog.TimestampUtc ?? auditLog.Timestamp ?? DateTime.UtcNow);
 
             await command.ExecuteNonQueryAsync(cancellationToken);
             return await FindByIdAsync(connection, auditLog.Id, cancellationToken);
@@ -109,7 +121,7 @@ namespace DER3.Api.Repositories
         private static async Task<Dictionary<string, object?>?> FindByIdAsync(SqlConnection connection, string id, CancellationToken cancellationToken)
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT id, userId, userName, action, entityType, entityId, oldValue, newValue, timestamp, ip, userAgent FROM AuditLog WHERE id = @id AND IsDeleted = 0";
+            command.CommandText = "SELECT id, userId, userName, action, entityType, entityId, oldValue, newValue, timestamp, ip, userAgent, UserEmail, DetailsJson, BeforeJson, AfterJson, IpAddress, TimestampUtc FROM AuditLog WHERE id = @id AND IsDeleted = 0";
             AddNVarChar(command, "@id", 64, id);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -134,6 +146,7 @@ namespace DER3.Api.Repositories
                 case "userId":
                 case "entityId":
                 case "ip":
+                case "IpAddress":
                     AddNVarChar(command, name, 64, value);
                     break;
                 case "userName":
@@ -141,13 +154,24 @@ namespace DER3.Api.Repositories
                 case "entityType":
                     AddNVarChar(command, name, 255, value);
                     break;
+                case "userEmail":
+                case "UserEmail":
+                    AddNVarChar(command, name, 256, value);
+                    break;
                 case "oldValue":
                 case "newValue":
                 case "userAgent":
+                case "DetailsJson":
+                case "BeforeJson":
+                case "AfterJson":
+                case "detailsJson":
+                case "beforeJson":
+                case "afterJson":
                     AddNVarCharMax(command, name, value);
                     break;
                 case "timestamp":
-                    AddDateTime(command, name, value);
+                case "TimestampUtc":
+                    AddDateTime2(command, name, value);
                     break;
                 default:
                     throw new InvalidOperationException($"Unsupported AuditLog field '{key}'.");
@@ -162,5 +186,8 @@ namespace DER3.Api.Repositories
 
         private static void AddDateTime(SqlCommand command, string name, object? value) =>
             command.Parameters.Add(new SqlParameter(name, SqlDbType.DateTime) { Value = value ?? DBNull.Value });
+
+        private static void AddDateTime2(SqlCommand command, string name, object? value) =>
+            command.Parameters.Add(new SqlParameter(name, SqlDbType.DateTime2) { Value = value ?? DBNull.Value });
     }
 }

@@ -77,6 +77,7 @@ builder.Services.AddScoped<IPermissionGroupService, PermissionGroupService>();
 builder.Services.AddScoped<IFrameworkService, FrameworkService>();
 builder.Services.AddScoped<IStandardClassificationService, StandardClassificationService>();
 builder.Services.AddScoped<IEvidenceService, EvidenceService>();
+builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();

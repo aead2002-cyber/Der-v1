@@ -15,8 +15,9 @@ namespace DER3.Api.Repositories
     public interface IFrameworkRepository
     {
         Task<Dictionary<string, object?>?> InsertAsync(FrameworkRecord framework, CancellationToken cancellationToken);
+        Task<Dictionary<string, object?>?> GetByIdAsync(string id, CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> UpdateAsync(string id, IReadOnlyDictionary<string, object?> fields, CancellationToken cancellationToken);
-        Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
+        Task<bool> DeleteAsync(string id, string? deletedBy, DateTime deletedAt, CancellationToken cancellationToken);
     }
 
     public sealed class FrameworkRepository : IFrameworkRepository
@@ -49,6 +50,12 @@ namespace DER3.Api.Repositories
             return await FindByIdAsync(connection, framework.Id, cancellationToken);
         }
 
+        public async Task<Dictionary<string, object?>?> GetByIdAsync(string id, CancellationToken cancellationToken)
+        {
+            await using var connection = await OpenConnectionAsync(cancellationToken);
+            return await FindByIdAsync(connection, id, cancellationToken);
+        }
+
         public async Task<Dictionary<string, object?>?> UpdateAsync(string id, IReadOnlyDictionary<string, object?> fields, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
@@ -67,20 +74,21 @@ namespace DER3.Api.Repositories
             return rowsAffected == 0 ? null : await FindByIdAsync(connection, id, cancellationToken);
         }
 
-        public async Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
+        public async Task<bool> DeleteAsync(string id, string? deletedBy, DateTime deletedAt, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = """
                 UPDATE Framework
                 SET IsDeleted = 1,
-                    DeletedAt = SYSUTCDATETIME(),
+                    DeletedAt = @DeletedAt,
                     DeletedBy = @DeletedBy
                 WHERE id = @id
                   AND IsDeleted = 0
                 """;
             AddNVarChar(command, "@id", 64, id);
             AddNVarChar(command, "@DeletedBy", 100, deletedBy);
+            AddDateTime2(command, "@DeletedAt", deletedAt);
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
             return rowsAffected > 0;
@@ -149,5 +157,8 @@ namespace DER3.Api.Repositories
 
         private static void AddDateTime(SqlCommand command, string name, object? value) =>
             command.Parameters.Add(new SqlParameter(name, SqlDbType.DateTime) { Value = value ?? DBNull.Value });
+
+        private static void AddDateTime2(SqlCommand command, string name, object? value) =>
+            command.Parameters.Add(new SqlParameter(name, SqlDbType.DateTime2) { Value = value ?? DBNull.Value });
     }
 }

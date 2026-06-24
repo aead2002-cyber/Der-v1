@@ -44,6 +44,100 @@ const ACTION_STYLES: Record<string, string> = {
   assignment: 'bg-cyan-50 text-cyan-700 border-cyan-200',
 };
 
+const ENTITY_NAME_KEYS = [
+  'nameAr',
+  'nameEn',
+  'titleAr',
+  'titleEn',
+  'displayName',
+  'displayNameEn',
+  'email',
+  'name',
+  'title',
+] as const;
+
+const parseMaybeJson = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+  const parsed = parseMaybeJson(value);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  return parsed as Record<string, unknown>;
+};
+
+const normalizeReadableText = (value: unknown): string | null => {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return null;
+};
+
+const getReadableNameFromPayload = (payload: unknown): string | null => {
+  const record = asRecord(payload);
+  if (!record) {
+    return null;
+  }
+
+  for (const key of ENTITY_NAME_KEYS) {
+    const candidate = normalizeReadableText(record[key]);
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const isFallbackName = (value: string | null | undefined): boolean => {
+  if (!value) {
+    return true;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === 'unnamed' ||
+    normalized === 'بدون اسم' ||
+    normalized.startsWith('بدون اسم#') ||
+    normalized.startsWith('unnamed#')
+  );
+};
+
+const formatEntityDisplayName = (name: string | null | undefined, entityId: string): string => {
+  const trimmedName = normalizeReadableText(name);
+  if (trimmedName && !isFallbackName(trimmedName)) {
+    return `${trimmedName} #${entityId}`;
+  }
+
+  return entityId;
+};
+
 export default function AuditTrailPage() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
@@ -136,15 +230,23 @@ export default function AuditTrailPage() {
     const q = searchTerm.trim().toLowerCase();
     const fromMs = dateFrom ? new Date(dateFrom).getTime() : -Infinity;
     const toMs = dateTo ? new Date(dateTo).getTime() + 86400000 : Infinity;
-    return logs.filter(log => {
+    return [...logs]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .filter(log => {
       if (actionFilter !== 'all' && log.action !== actionFilter) return false;
       if (entityFilter !== 'all' && log.entityType !== entityFilter) return false;
       if (userFilter !== 'all' && log.userId !== userFilter) return false;
       const ts = new Date(log.timestamp).getTime();
       if (ts < fromMs || ts > toMs) return false;
       if (q) {
-        const name = getEntityDisplayName(log.entityType, log.entityId, isRtl, lookupData) || '';
-        const blob = `${log.userName} ${log.entityType} ${log.action} ${log.entityId} ${name}`.toLowerCase();
+        const auditName =
+          getReadableNameFromPayload((log as unknown as Record<string, unknown>).afterJson) ??
+          getReadableNameFromPayload(log.newValue) ??
+          getReadableNameFromPayload((log as unknown as Record<string, unknown>).beforeJson) ??
+          getReadableNameFromPayload(log.oldValue) ??
+          getEntityDisplayName(log.entityType, log.entityId, isRtl, lookupData) ??
+          '';
+        const blob = `${log.userName} ${log.entityType} ${log.action} ${log.entityId} ${auditName}`.toLowerCase();
         if (!blob.includes(q)) return false;
       }
       return true;
@@ -176,7 +278,14 @@ export default function AuditTrailPage() {
         l.action,
         l.entityType,
         l.entityId,
-        getEntityDisplayName(l.entityType, l.entityId, isRtl, lookupData) || '',
+        formatEntityDisplayName(
+          getReadableNameFromPayload((l as unknown as Record<string, unknown>).afterJson) ??
+            getReadableNameFromPayload(l.newValue) ??
+            getReadableNameFromPayload((l as unknown as Record<string, unknown>).beforeJson) ??
+            getReadableNameFromPayload(l.oldValue) ??
+            getEntityDisplayName(l.entityType, l.entityId, isRtl, lookupData),
+          l.entityId,
+        ),
         l.oldValue ? JSON.stringify(l.oldValue) : '',
         l.newValue ? JSON.stringify(l.newValue) : '',
       ]),
@@ -331,7 +440,14 @@ export default function AuditTrailPage() {
             {filteredLogs.map(log => {
               const u = userById.get(log.userId);
               const initials = (log.userName || '?').trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
-              const entityName = getEntityDisplayName(log.entityType, log.entityId, isRtl, lookupData);
+              const entityName = formatEntityDisplayName(
+                getReadableNameFromPayload((log as unknown as Record<string, unknown>).afterJson) ??
+                  getReadableNameFromPayload(log.newValue) ??
+                  getReadableNameFromPayload((log as unknown as Record<string, unknown>).beforeJson) ??
+                  getReadableNameFromPayload(log.oldValue) ??
+                  getEntityDisplayName(log.entityType, log.entityId, isRtl, lookupData),
+                log.entityId,
+              );
               const isExpanded = expanded.has(log.id);
               const hasDiff = log.oldValue !== undefined || log.newValue !== undefined;
               const actionStyle = ACTION_STYLES[log.action] || 'bg-slate-50 text-slate-700 border-slate-200';
@@ -367,12 +483,7 @@ export default function AuditTrailPage() {
                       </div>
 
                       <div className="text-[13px] text-text-main">
-                        {entityName ? (
-                          <span className="font-medium">{entityName}</span>
-                        ) : (
-                          <span className="text-text-muted italic">{isRtl ? 'بدون اسم' : 'Unnamed'}</span>
-                        )}
-                        <span className="text-[11px] text-text-muted font-mono ml-2">#{log.entityId}</span>
+                        <span className="font-medium">{entityName}</span>
                       </div>
 
                       <div className="flex items-center gap-3 text-[11px] text-text-muted font-medium">

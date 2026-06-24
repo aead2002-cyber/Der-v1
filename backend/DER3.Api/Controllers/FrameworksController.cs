@@ -35,7 +35,7 @@ namespace DER3.Api.Controllers
             // TODO: Add authorization before enabling framework writes in production.
             try
             {
-                var result = await _frameworkService.CreateAsync(request, cancellationToken);
+                var result = await _frameworkService.CreateAsync(request, User, HttpContext, cancellationToken);
                 return result.Success
                     ? Ok(new { success = true, item = result.Item })
                     : BadRequest(new { success = false, error = result.Error });
@@ -72,7 +72,7 @@ namespace DER3.Api.Controllers
             // TODO: Add authorization before enabling framework writes in production.
             try
             {
-                var result = await _frameworkService.UpdateAsync(id, request, cancellationToken);
+                var result = await _frameworkService.UpdateAsync(id, request, User, HttpContext, cancellationToken);
                 if (result.Success)
                 {
                     return Ok(new { success = true, item = result.Item });
@@ -111,7 +111,7 @@ namespace DER3.Api.Controllers
             try
             {
                 var deletedBy = User.FindFirstValue(ClaimTypes.Email);
-                var result = await _frameworkService.DeleteAsync(id, deletedBy, cancellationToken);
+                var result = await _frameworkService.DeleteAsync(id, deletedBy, User, HttpContext, cancellationToken);
                 return result.Success
                     ? Ok(new { success = true })
                     : NotFound(new { success = false, error = result.Error });
