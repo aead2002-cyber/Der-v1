@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<FrameworkWriteResult> CreateAsync(CreateFrameworkRequestDto request, CancellationToken cancellationToken);
         Task<FrameworkWriteResult> UpdateAsync(string id, UpdateFrameworkRequestDto request, CancellationToken cancellationToken);
-        Task<FrameworkWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<FrameworkWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class FrameworkService : IFrameworkService
@@ -90,14 +90,14 @@ namespace DER3.Api.Services
                 : new FrameworkWriteResult(true, Item: item);
         }
 
-        public async Task<FrameworkWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<FrameworkWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new FrameworkWriteResult(false, "Framework id is required");
             }
 
-            var deleted = await _frameworkRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _frameworkRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted ? new FrameworkWriteResult(true) : new FrameworkWriteResult(false, "Framework not found");
         }
 

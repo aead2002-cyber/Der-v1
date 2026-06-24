@@ -62,7 +62,7 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT id, originalName, mimeType, size, iv, authTag, data FROM FileBlob WHERE id = @id";
+            command.CommandText = "SELECT id, originalName, mimeType, size, iv, authTag, data FROM FileBlob WHERE id = @id AND IsDeleted = 0";
             command.Parameters.Add(new SqlParameter("@id", System.Data.SqlDbType.NVarChar, 64) { Value = id });
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -85,7 +85,14 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM FileBlob WHERE id = @id";
+            command.CommandText = """
+                UPDATE FileBlob
+                SET IsDeleted = 1,
+                    DeletedAt = SYSUTCDATETIME(),
+                    DeletedBy = NULL
+                WHERE id = @id
+                  AND IsDeleted = 0
+                """;
             command.Parameters.Add(new SqlParameter("@id", System.Data.SqlDbType.NVarChar, 64) { Value = id });
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);

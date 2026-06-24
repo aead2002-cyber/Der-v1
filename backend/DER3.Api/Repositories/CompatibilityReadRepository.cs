@@ -31,7 +31,7 @@ namespace DER3.Api.Repositories
             await connection.OpenAsync(cancellationToken);
 
             await using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT * FROM {map.TableName}";
+            command.CommandText = $"SELECT * FROM {map.TableName} WHERE IsDeleted = 0";
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))

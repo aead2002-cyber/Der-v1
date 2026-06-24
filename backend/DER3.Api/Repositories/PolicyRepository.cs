@@ -63,7 +63,7 @@ namespace DER3.Api.Repositories
             await using var command = connection.CreateCommand();
 
             var assignments = fields.Keys.Select((key, index) => $"[{MapPolicyColumn(key, frameworkColumn)}] = @p{index}").ToArray();
-            command.CommandText = $"UPDATE Policy SET {string.Join(", ", assignments)} WHERE id = @id";
+            command.CommandText = $"UPDATE Policy SET {string.Join(", ", assignments)} WHERE id = @id AND IsDeleted = 0";
 
             var parameterIndex = 0;
             foreach (var (key, value) in fields)
@@ -81,7 +81,14 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM Policy WHERE id = @id";
+            command.CommandText = """
+                UPDATE Policy
+                SET IsDeleted = 1,
+                    DeletedAt = SYSUTCDATETIME(),
+                    DeletedBy = NULL
+                WHERE id = @id
+                  AND IsDeleted = 0
+                """;
             AddNVarChar(command, "@id", 64, id);
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -92,7 +99,7 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT 1 FROM Framework WHERE id = @id";
+            command.CommandText = "SELECT 1 FROM Framework WHERE id = @id AND IsDeleted = 0";
             AddNVarChar(command, "@id", 64, frameworkId);
 
             return await command.ExecuteScalarAsync(cancellationToken) is not null;
@@ -115,7 +122,7 @@ namespace DER3.Api.Repositories
         {
             var frameworkColumn = await GetPolicyFrameworkColumnAsync(connection, cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, [{frameworkColumn}] AS frameworkId, createdAt, updatedAt FROM Policy WHERE id = @id";
+            command.CommandText = $"SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, [{frameworkColumn}] AS frameworkId, createdAt, updatedAt FROM Policy WHERE id = @id AND IsDeleted = 0";
             AddNVarChar(command, "@id", 64, id);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);

@@ -65,7 +65,7 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = $"UPDATE Commitment SET {string.Join(", ", fields.Keys.Select((key, index) => $"[{key}] = @p{index}"))} WHERE id = @id";
+            command.CommandText = $"UPDATE Commitment SET {string.Join(", ", fields.Keys.Select((key, index) => $"[{key}] = @p{index}"))} WHERE id = @id AND IsDeleted = 0";
 
             var index = 0;
             foreach (var (key, value) in fields)
@@ -83,7 +83,14 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM Commitment WHERE id = @id";
+            command.CommandText = """
+                UPDATE Commitment
+                SET IsDeleted = 1,
+                    DeletedAt = SYSUTCDATETIME(),
+                    DeletedBy = NULL
+                WHERE id = @id
+                  AND IsDeleted = 0
+                """;
             AddNVarChar(command, "@id", 64, id);
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -106,7 +113,7 @@ namespace DER3.Api.Repositories
         private static async Task<Dictionary<string, object?>?> FindByIdAsync(SqlConnection connection, string id, CancellationToken cancellationToken)
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, expiryDate, responsibleUser, status, evidenceTitle, evidenceLink, evidenceUploadedAt, createdAt, updatedAt FROM Commitment WHERE id = @id";
+            command.CommandText = "SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, expiryDate, responsibleUser, status, evidenceTitle, evidenceLink, evidenceUploadedAt, createdAt, updatedAt FROM Commitment WHERE id = @id AND IsDeleted = 0";
             AddNVarChar(command, "@id", 64, id);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);

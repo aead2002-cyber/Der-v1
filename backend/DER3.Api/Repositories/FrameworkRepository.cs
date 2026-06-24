@@ -16,7 +16,7 @@ namespace DER3.Api.Repositories
     {
         Task<Dictionary<string, object?>?> InsertAsync(FrameworkRecord framework, CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> UpdateAsync(string id, IReadOnlyDictionary<string, object?> fields, CancellationToken cancellationToken);
-        Task<bool> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class FrameworkRepository : IFrameworkRepository
@@ -53,7 +53,7 @@ namespace DER3.Api.Repositories
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = $"UPDATE Framework SET {string.Join(", ", fields.Keys.Select((key, index) => $"[{key}] = @p{index}"))} WHERE id = @id";
+            command.CommandText = $"UPDATE Framework SET {string.Join(", ", fields.Keys.Select((key, index) => $"[{key}] = @p{index}"))} WHERE id = @id AND IsDeleted = 0";
 
             var index = 0;
             foreach (var (key, value) in fields)
@@ -67,12 +67,20 @@ namespace DER3.Api.Repositories
             return rowsAffected == 0 ? null : await FindByIdAsync(connection, id, cancellationToken);
         }
 
-        public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM Framework WHERE id = @id";
+            command.CommandText = """
+                UPDATE Framework
+                SET IsDeleted = 1,
+                    DeletedAt = SYSUTCDATETIME(),
+                    DeletedBy = @DeletedBy
+                WHERE id = @id
+                  AND IsDeleted = 0
+                """;
             AddNVarChar(command, "@id", 64, id);
+            AddNVarChar(command, "@DeletedBy", 100, deletedBy);
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
             return rowsAffected > 0;
@@ -94,7 +102,7 @@ namespace DER3.Api.Repositories
         private static async Task<Dictionary<string, object?>?> FindByIdAsync(SqlConnection connection, string id, CancellationToken cancellationToken)
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, createdAt, updatedAt FROM Framework WHERE id = @id";
+            command.CommandText = "SELECT id, nameAr, nameEn, descriptionAr, descriptionEn, createdAt, updatedAt FROM Framework WHERE id = @id AND IsDeleted = 0";
             AddNVarChar(command, "@id", 64, id);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);

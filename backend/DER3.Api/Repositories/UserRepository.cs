@@ -77,7 +77,7 @@ namespace DER3.Api.Repositories
             await connection.OpenAsync(cancellationToken);
 
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM [User] WHERE LOWER(email) = @email";
+            command.CommandText = "SELECT * FROM [User] WHERE LOWER(email) = @email AND IsDeleted = 0";
             command.Parameters.Add(new SqlParameter("@email", email.Trim().ToLowerInvariant()));
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -190,7 +190,7 @@ namespace DER3.Api.Repositories
                     bypassOtp = @bypassOtp,
                     receiveSecurityIncidents = @receiveSecurityIncidents,
                     updatedAt = @now
-                WHERE uid = @uid
+                    WHERE uid = @uid AND IsDeleted = 0
                 """;
 
             command.Parameters.Add(new SqlParameter("@uid", uid));
@@ -216,7 +216,7 @@ namespace DER3.Api.Repositories
                 SET passwordHash = @passwordHash,
                     passwordSalt = @passwordSalt,
                     updatedAt = @now
-                WHERE uid = @uid
+                    WHERE uid = @uid AND IsDeleted = 0
                 """;
             command.Parameters.Add(new SqlParameter("@uid", uid));
             command.Parameters.Add(new SqlParameter("@passwordHash", passwordHash));
@@ -232,7 +232,14 @@ namespace DER3.Api.Repositories
             await using var connection = await OpenConnectionAsync(cancellationToken);
 
             await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM [User] WHERE uid = @uid";
+            command.CommandText = """
+                UPDATE [User]
+                SET IsDeleted = 1,
+                    DeletedAt = SYSUTCDATETIME(),
+                    DeletedBy = NULL
+                WHERE uid = @uid
+                  AND IsDeleted = 0
+                """;
             command.Parameters.Add(new SqlParameter("@uid", uid));
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -258,7 +265,7 @@ namespace DER3.Api.Repositories
             CancellationToken cancellationToken)
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM [User] WHERE uid = @uid";
+            command.CommandText = "SELECT * FROM [User] WHERE uid = @uid AND IsDeleted = 0";
             command.Parameters.Add(new SqlParameter("@uid", uid));
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
