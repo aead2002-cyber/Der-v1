@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -50,6 +50,7 @@ import { filesApi, resolveFileUrl } from '@/services/filesApi';
 import { notificationsApi } from '@/services/notificationsApi';
 import { PasswordRulesList, isPasswordValid } from './shared/PasswordRules';
 import { Notification } from '@/types';
+import { stripPlatformPrefix } from '@/shared/layout/platformRouting';
 
 import { Logo } from './Logo';
 
@@ -60,6 +61,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
+  const currentPath = stripPlatformPrefix(location.pathname);
   const { user, logout, updateProfile, can } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [expandedItems, setExpandedItems] = React.useState<string[]>([]);
@@ -202,7 +204,7 @@ export default function Layout({ children }: LayoutProps) {
 
   // Per-route permission map — must stay in sync with App.tsx ProtectedRoute keys.
   const NAV_PERMS: Record<string, string> = {
-    '/': 'dashboard.view',
+    '/dashboard': 'dashboard.view',
     '/my-tasks': 'tasks.my_tasks.view',
     '/frameworks': 'frameworks.view',
     '/policies': 'policies.view',
@@ -222,7 +224,7 @@ export default function Layout({ children }: LayoutProps) {
     {
       title: isRtl ? 'الرئيسية' : 'Main',
       items: [
-        { name: t('dashboard'), href: '/', emoji: '📊' },
+        { name: t('dashboard'), href: '/dashboard', emoji: '📊' },
         { name: t('my_tasks'), href: '/my-tasks', emoji: '✅' },
       ]
     },
@@ -293,13 +295,13 @@ export default function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     navItems.forEach(item => {
-      if (item.children && item.children.some(child => child.href === location.pathname)) {
+      if (item.children && item.children.some(child => child.href === currentPath)) {
         if (!expandedItems.includes(item.id || item.name)) {
           setExpandedItems(prev => [...prev, item.id || item.name]);
         }
       }
     });
-  }, [location.pathname]);
+  }, [currentPath]);
 
   const toggleExpand = (itemId: string) => {
     setExpandedItems(prev => 
@@ -311,9 +313,9 @@ export default function Layout({ children }: LayoutProps) {
 
   const getActiveItemName = () => {
     for (const item of navItems) {
-      if (item.href === location.pathname) return item.name;
+      if (item.href === currentPath) return item.name;
       if (item.children) {
-        const child = item.children.find(c => c.href === location.pathname);
+        const child = item.children.find(c => c.href === currentPath);
         if (child) return child.name;
       }
     }
@@ -341,7 +343,7 @@ export default function Layout({ children }: LayoutProps) {
                 const itemId = item.id || item.name;
                 if (item.children) {
                   const isExpanded = expandedItems.includes(itemId);
-                  const isChildActive = item.children.some(c => location.pathname === c.href);
+                  const isChildActive = item.children.some(c => currentPath === c.href);
                   
                   return (
                     <div key={itemId} className="space-y-0.5">
@@ -374,7 +376,7 @@ export default function Layout({ children }: LayoutProps) {
                             className="overflow-hidden bg-black/20"
                           >
                             {item.children.map((child) => {
-                              const isActive = location.pathname === child.href;
+                              const isActive = currentPath === child.href;
                               return (
                                 <Link
                                   key={child.name}
@@ -397,7 +399,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   );
                 }
-                const isActive = location.pathname === item.href;
+                const isActive = currentPath === item.href;
                 return (
                   <Link
                     key={item.name}

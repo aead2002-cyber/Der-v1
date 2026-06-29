@@ -138,10 +138,10 @@ export default function StandardsPage() {
       setFrameworks(frameworkRows);
       setClassifications(classificationRows);
       setUsers(userRows);
+      setProcedures(procedureRows);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load standards');
     }
-    setProcedures(procedureRows);
 
   };
 
@@ -214,7 +214,6 @@ export default function StandardsPage() {
     setIsQuickAddOpen(false);
     // Refresh data to show updated progress and counts
     await loadData();
-    setProcedures(procedureRows);
 
   };
 

@@ -1,4 +1,4 @@
-export type Status = 'not_started' | 'in_progress' | 'completed';
+﻿export type Status = 'not_started' | 'in_progress' | 'completed';
 export type Importance = 'high' | 'medium' | 'low';
 export type Role = 'admin' | 'auditor' | 'user';
 
@@ -27,6 +27,8 @@ export interface User {
   bypassOtp?: boolean;
   /** When true, this user receives direct notification (and email) for every new security incident report. */
   receiveSecurityIncidents?: boolean;
+  /** Temporary frontend-only platform access list until backend authorization is added. */
+  platforms?: import('./shared/types/platform').PlatformCode[];
 }
 
 export interface PermissionGroup {

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from './types';
 import { hasPermission } from './lib/permissionHelpers';
 import { tokenStorage } from './services/tokenStorage';
+import { applyTemporaryPlatformAccess } from '@/shared/auth/platformAccess';
 
 interface AuthContextType {
   user: User | null;
@@ -21,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const currentUser = tokenStorage.getToken() ? tokenStorage.getUser() : null;
-    setUser(currentUser);
+    setUser(currentUser ? applyTemporaryPlatformAccess(currentUser) : null);
     setLoading(false);
   }, []);
 
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = (updates: Partial<User>) => {
     if (user) {
-      const updatedUser = { ...user, ...updates };
+      const updatedUser = applyTemporaryPlatformAccess({ ...user, ...updates });
       tokenStorage.setUser(updatedUser);
       setUser(updatedUser);
     }
