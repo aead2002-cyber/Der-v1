@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Paperclip, Plus, X, Clock, Eye } from 'lucide-react';
 import { filesApi, resolveFileUrl } from '@/services/filesApi';
@@ -17,7 +17,7 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
   const isRtl = i18n.language === 'ar';
   const [uploading, setUploading] = useState(false);
 
-  const labelText = label || (isRtl ? 'المرفقات' : 'Attachments');
+  const labelText = label || (isRtl ? 'ط§ظ„ظ…ط±ظپظ‚ط§طھ' : 'Attachments');
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -28,7 +28,7 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
         const uploaded = await filesApi.uploadFile(file);
         next.push(uploaded.url);
       } catch {
-        toast.error(isRtl ? `��� ���: ${file.name}` : `Upload failed: ${file.name}`);
+        toast.error(isRtl ? `فشل رفع: ${file.name}` : `Upload failed: ${file.name}`);
       }
     }
     setUploading(false);
@@ -36,7 +36,7 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
   };
   const labelOf = (val: string) => {
     if (!val) return '';
-    if (val.startsWith('/uploads/') || /^https?:\/\//i.test(val)) {
+    if (val.startsWith('/api/files/') || /^https?:\/\//i.test(val)) {
       const parts = val.split('/');
       return parts[parts.length - 1].replace(/^\d+-[a-f0-9]+-/, '');
     }
@@ -46,7 +46,7 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
   const open = (val: string) => {
     const url = resolveFileUrl(val) || val;
     if (url) {
-      filesApi.openFile(val).catch(() => toast.error(isRtl ? '���� ��� ������' : 'Could not open attachment'));
+      filesApi.openFile(val).catch(() => toast.error(isRtl ? 'تعذر فتح المرفق' : 'Could not open attachment'));
     }
   };
 
@@ -80,7 +80,7 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
               type="button"
               onClick={() => onChange(value.filter((_, i) => i !== idx))}
               className="text-rose-500 hover:text-rose-700 opacity-60 hover:opacity-100 transition-opacity"
-              title={isRtl ? 'حذف' : 'Remove'}
+              title={isRtl ? 'ط­ط°ظپ' : 'Remove'}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -91,7 +91,7 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
           uploading && 'opacity-60 pointer-events-none'
         )}>
           {uploading ? <Clock className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          {isRtl ? 'إضافة مرفق' : 'Add Attachment'}
+          {isRtl ? 'ط¥ط¶ط§ظپط© ظ…ط±ظپظ‚' : 'Add Attachment'}
           <input
             type="file"
             multiple={multiple}
@@ -106,5 +106,8 @@ export function AttachmentsField({ value, onChange, label, multiple = true }: At
     </div>
   );
 }
+
+
+
 
 

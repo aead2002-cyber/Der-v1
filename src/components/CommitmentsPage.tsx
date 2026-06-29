@@ -546,7 +546,7 @@ export default function CommitmentsPage() {
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs font-medium flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Paperclip className="w-3 h-3 text-emerald-600" />
-                    <span className="truncate max-w-[200px] text-emerald-700">{(() => { const lc = commEvidenceLink; if (lc.startsWith('/uploads/') || /^https?:\/\//i.test(lc)) { const p = lc.split('/'); return p[p.length-1].replace(/^\d+-[a-f0-9]+-/, ''); } return lc; })()}</span>
+                    <span className="truncate max-w-[200px] text-emerald-700">{(() => { const lc = commEvidenceLink; if (lc.startsWith('/api/files/') || /^https?:\/\//i.test(lc)) { const p = lc.split('/'); return p[p.length-1].replace(/^\d+-[a-f0-9]+-/, ''); } return lc; })()}</span>
                   </div>
                   <button onClick={() => setCommEvidenceLink('')} className="text-emerald-400 hover:text-rose-500 font-bold text-lg">×</button>
                 </div>

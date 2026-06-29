@@ -8,7 +8,7 @@ The current permission model is group-based with per-user overrides.
 
 ### User table shape
 
-From `backend/DER3.Api/Repositories/UserRepository.cs`, `server.js`, and `src/types.ts`, the `[User]` row currently includes:
+From `backend/DER3.Api/Repositories/UserRepository.cs` and `src/types.ts`, the `[User]` row currently includes:
 
 - `uid`
 - `email`

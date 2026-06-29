@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
-          report: path.resolve(__dirname, 'report.html'),
         },
       },
     },

@@ -46,6 +46,6 @@ export const uploadFile = async (file: File): Promise<{ url: string; name: strin
 export const resolveAttachmentUrl = (value: string): string | null => {
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith('/uploads/') || value.startsWith('/api/files/')) return `${apiOrigin}${value}`;
+  if (value.startsWith('/api/files/')) return `${apiOrigin}${value}`;
   return null;
 };

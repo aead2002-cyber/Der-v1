@@ -239,7 +239,7 @@ export default function AddUserPage() {
                     <p className="text-[12px] font-bold text-text-main truncate">
                       {(() => {
                         const v = formData.photoURL!;
-                        if (v.startsWith('/uploads/') || v.startsWith('http')) {
+                        if (v.startsWith('/api/files/') || v.startsWith('http')) {
                           const parts = v.split('/');
                           return parts[parts.length - 1].replace(/^\d+-[a-f0-9]+-/, '');
                         }

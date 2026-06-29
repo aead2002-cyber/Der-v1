@@ -500,7 +500,7 @@ export default function MyTasksPage() {
 
   const attachmentLabel = (value: string) => {
     if (!value) return '';
-    if (value.startsWith('/api/files/') || value.startsWith('/uploads/') || /^https?:\/\//i.test(value)) {
+    if (value.startsWith('/api/files/') || /^https?:\/\//i.test(value)) {
       const parts = value.split('/');
       return parts[parts.length - 1].replace(/^\d+-[a-f0-9]+-/, '');
     }

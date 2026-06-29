@@ -95,7 +95,7 @@ export const isBackendFileUrl = (value: string): boolean => !!extractFileId(valu
 export const resolveFileUrl = (value: string): string | null => {
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith('/api/files/') || value.startsWith('/uploads/')) {
+  if (value.startsWith('/api/files/')) {
     return `${apiBaseUrl}${value}`;
   }
   return null;

@@ -278,7 +278,7 @@ const IncidentsPage: React.FC = () => {
 
   const attachmentLabel = (value: string) => {
     if (!value) return '';
-    if (value.startsWith('/uploads/') || value.startsWith('/api/files/') || /^https?:\/\//i.test(value)) {
+    if (value.startsWith('/api/files/') || /^https?:\/\//i.test(value)) {
       const parts = value.split('/');
       return parts[parts.length - 1].replace(/^\d+-[a-f0-9]+-/, '');
     }
