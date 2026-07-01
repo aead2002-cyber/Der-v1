@@ -14,19 +14,25 @@ namespace DER3.Api.Services
 
         Task<UserWriteResult> UpdateUserAsync(string uid, UpdateUserRequestDto request, CancellationToken cancellationToken);
 
+        Task<UserWriteResult> GetCurrentUserAsync(string uid, CancellationToken cancellationToken);
+
+        Task<UserWriteResult> UpdateCurrentUserProfileAsync(string uid, UpdateMyProfileRequestDto request, CancellationToken cancellationToken);
+
         Task<UserWriteResult> SetPasswordAsync(string uid, SetPasswordRequestDto request, CancellationToken cancellationToken);
 
-        Task<UserWriteResult> DeleteAsync(string uid, CancellationToken cancellationToken);
+        Task<UserWriteResult> DeleteAsync(string uid, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class UserService : IUserService
     {
         private const int MinimumPasswordLength = 6;
         private readonly IUserRepository _userRepository;
+        private readonly IPlatformAccessService _platformAccessService;
 
-        public UserService(IUserRepository userRepository)
+        public UserService(IUserRepository userRepository, IPlatformAccessService platformAccessService)
         {
             _userRepository = userRepository;
+            _platformAccessService = platformAccessService;
         }
 
         public async Task<UserWriteResult> CreateUserAsync(CreateUserRequestDto request, CancellationToken cancellationToken)
@@ -75,7 +81,9 @@ namespace DER3.Api.Services
                     passwordSalt),
                 cancellationToken);
 
-            return new UserWriteResult(true, User: user);
+            return user is null
+                ? new UserWriteResult(false, "User could not be saved")
+                : new UserWriteResult(true, User: _platformAccessService.WithPlatforms(user));
         }
 
         public async Task<UserWriteResult> UpdateUserAsync(string uid, UpdateUserRequestDto request, CancellationToken cancellationToken)
@@ -113,7 +121,64 @@ namespace DER3.Api.Services
 
             return user is null
                 ? new UserWriteResult(false, "User not found")
-                : new UserWriteResult(true, User: user);
+                : new UserWriteResult(true, User: _platformAccessService.WithPlatforms(user));
+        }
+
+        public async Task<UserWriteResult> GetCurrentUserAsync(string uid, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return new UserWriteResult(false, "uid is required");
+            }
+
+            var user = await _userRepository.FindUserByUidAsync(uid.Trim(), cancellationToken);
+            return user is null
+                ? new UserWriteResult(false, "User not found")
+                : new UserWriteResult(true, User: _platformAccessService.WithPlatforms(user));
+        }
+
+        public async Task<UserWriteResult> UpdateCurrentUserProfileAsync(string uid, UpdateMyProfileRequestDto request, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return new UserWriteResult(false, "uid is required");
+            }
+
+            if (IncidentService.HasUnknownFields(request.UnknownFields))
+            {
+                return new UserWriteResult(false, "Payload contains unsupported fields");
+            }
+
+            var trimmedUid = uid.Trim();
+            var currentUser = await _userRepository.FindUserByUidAsync(trimmedUid, cancellationToken);
+            if (currentUser is null)
+            {
+                return new UserWriteResult(false, "User not found");
+            }
+
+            var currentDisplayName = ReadString(currentUser, "displayName");
+            if (string.IsNullOrWhiteSpace(currentDisplayName))
+            {
+                return new UserWriteResult(false, "User display name is required");
+            }
+
+            var displayName = ResolveDisplayName(request.DisplayName, currentDisplayName);
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                return new UserWriteResult(false, "displayName is required");
+            }
+
+            var displayNameEn = ResolveOptionalString(request.DisplayNameEn, ReadString(currentUser, "displayNameEn"));
+            var photoUrl = ResolveOptionalString(request.PhotoURL, ReadString(currentUser, "photoURL"));
+
+            var updated = await _userRepository.UpdateMyProfileAsync(
+                trimmedUid,
+                new UpdateMyProfileRecord(displayName, displayNameEn, photoUrl),
+                cancellationToken);
+
+            return updated is null
+                ? new UserWriteResult(false, "User not found")
+                : new UserWriteResult(true, User: _platformAccessService.WithPlatforms(updated));
         }
 
         public async Task<UserWriteResult> SetPasswordAsync(string uid, SetPasswordRequestDto request, CancellationToken cancellationToken)
@@ -141,14 +206,14 @@ namespace DER3.Api.Services
                 : new UserWriteResult(false, "User not found");
         }
 
-        public async Task<UserWriteResult> DeleteAsync(string uid, CancellationToken cancellationToken)
+        public async Task<UserWriteResult> DeleteAsync(string uid, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(uid))
             {
                 return new UserWriteResult(false, "uid is required");
             }
 
-            var deleted = await _userRepository.DeleteAsync(uid.Trim(), cancellationToken);
+            var deleted = await _userRepository.DeleteAsync(uid.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new UserWriteResult(true)
                 : new UserWriteResult(false, "User not found");
@@ -185,6 +250,42 @@ namespace DER3.Api.Services
             }
 
             return element.GetRawText();
+        }
+
+        private static string? ResolveOptionalString(string? incoming, string? fallback)
+        {
+            if (incoming is null)
+            {
+                return fallback;
+            }
+
+            var trimmed = incoming.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        }
+
+        private static string ResolveDisplayName(string? incoming, string fallback)
+        {
+            if (incoming is null)
+            {
+                return fallback;
+            }
+
+            var trimmed = incoming.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? fallback : trimmed;
+        }
+
+        private static string? ReadString(Dictionary<string, object?> user, string key)
+        {
+            if (!user.TryGetValue(key, out var value) || value is null)
+            {
+                return null;
+            }
+
+            return value switch
+            {
+                string s => s,
+                _ => value.ToString()
+            };
         }
     }
 }

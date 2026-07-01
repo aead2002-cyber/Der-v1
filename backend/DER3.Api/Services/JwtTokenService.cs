@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
 
 namespace DER3.Api.Services
@@ -13,10 +14,12 @@ namespace DER3.Api.Services
     public sealed class JwtTokenService : IJwtTokenService
     {
         private readonly IConfiguration _configuration;
+        private readonly IPlatformAccessService _platformAccessService;
 
-        public JwtTokenService(IConfiguration configuration)
+        public JwtTokenService(IConfiguration configuration, IPlatformAccessService platformAccessService)
         {
             _configuration = configuration;
+            _platformAccessService = platformAccessService;
         }
 
         public string CreateToken(AuthenticatedUser user)
@@ -44,6 +47,7 @@ namespace DER3.Api.Services
             AddClaimIfPresent(claims, ClaimTypes.Email, user.Email);
             AddClaimIfPresent(claims, ClaimTypes.Name, user.DisplayName);
             AddClaimIfPresent(claims, ClaimTypes.Role, user.Role);
+            AddClaimIfPresent(claims, "platforms", JsonSerializer.Serialize(_platformAccessService.ResolvePlatforms(user.User)));
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
             var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);

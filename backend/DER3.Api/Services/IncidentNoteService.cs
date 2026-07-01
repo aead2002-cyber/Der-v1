@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<IncidentNoteWriteResult> CreateAsync(CreateIncidentNoteRequestDto request, CancellationToken cancellationToken);
         Task<IncidentNoteWriteResult> UpdateAsync(string id, UpdateIncidentNoteRequestDto request, CancellationToken cancellationToken);
-        Task<IncidentNoteWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<IncidentNoteWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class IncidentNoteService : IIncidentNoteService
@@ -84,14 +84,14 @@ namespace DER3.Api.Services
                 : new IncidentNoteWriteResult(true, Item: item);
         }
 
-        public async Task<IncidentNoteWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<IncidentNoteWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new IncidentNoteWriteResult(false, "Incident note id is required");
             }
 
-            var deleted = await _incidentNoteRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _incidentNoteRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new IncidentNoteWriteResult(true)
                 : new IncidentNoteWriteResult(false, "Incident note not found");

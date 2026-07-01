@@ -47,6 +47,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/AuthContext';
 import { filesApi, resolveFileUrl } from '@/services/filesApi';
+import { usersApi } from '@/services/usersApi';
 import { notificationsApi } from '@/services/notificationsApi';
 import { PasswordRulesList, isPasswordValid } from './shared/PasswordRules';
 import { Notification } from '@/types';
@@ -107,21 +108,33 @@ export default function Layout({ children }: LayoutProps) {
     }
 
     setIsSavingProfile(true);
+    let profileUpdated = false;
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      updateProfile({
+      const updatedUser = await usersApi.updateCurrentUserProfile({
         displayName: profileData.displayName,
         displayNameEn: profileData.displayNameEn,
         photoURL: profileData.photoURL
-      } as any);
+      });
+
+      updateProfile(updatedUser);
+      profileUpdated = true;
+
+      if (profileData.newPassword) {
+        await usersApi.setPassword(updatedUser.uid, profileData.newPassword);
+      }
 
       toast.success(t('profile_updated_success'));
       setIsProfileDialogOpen(false);
       setProfileData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
     } catch (error) {
-      toast.error(t('error_updating_profile'));
+      const message = error instanceof Error ? error.message : t('error_updating_profile');
+      if (profileUpdated && profileData.newPassword) {
+        toast.error(
+          `${t('profile_updated_success')}. ${message || t('error_updating_profile')}`
+        );
+      } else {
+        toast.error(message || t('error_updating_profile'));
+      }
     } finally {
       setIsSavingProfile(false);
     }

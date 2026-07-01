@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<ChangeRequestWriteResult> CreateAsync(CreateChangeRequestDto request, CancellationToken cancellationToken);
         Task<ChangeRequestWriteResult> UpdateAsync(string id, UpdateChangeRequestDto request, CancellationToken cancellationToken);
-        Task<ChangeRequestWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<ChangeRequestWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class ChangeRequestService : IChangeRequestService
@@ -102,14 +102,14 @@ namespace DER3.Api.Services
                 : new ChangeRequestWriteResult(true, Item: item);
         }
 
-        public async Task<ChangeRequestWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<ChangeRequestWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new ChangeRequestWriteResult(false, "ChangeRequest id is required");
             }
 
-            var deleted = await _changeRequestRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _changeRequestRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new ChangeRequestWriteResult(true)
                 : new ChangeRequestWriteResult(false, "ChangeRequest not found");

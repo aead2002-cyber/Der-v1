@@ -633,8 +633,6 @@ export default function ReportsPage() {
   const handleExport = async (format: 'pdf' | 'excel') => {
     setIsGenerating(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate generation
-
       if (format === 'pdf') {
         const html = buildReportHtml();
         const win = window.open('', '_blank', 'width=1024,height=768');

@@ -26,7 +26,7 @@ namespace DER3.Api.Repositories
 
         Task<StoredFileBlob?> FindByIdAsync(string id, CancellationToken cancellationToken);
 
-        Task<bool> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class FileRepository : IFileRepository
@@ -81,7 +81,7 @@ namespace DER3.Api.Repositories
                 (byte[])reader["data"]);
         }
 
-        public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
@@ -89,11 +89,12 @@ namespace DER3.Api.Repositories
                 UPDATE FileBlob
                 SET IsDeleted = 1,
                     DeletedAt = SYSUTCDATETIME(),
-                    DeletedBy = NULL
+                    DeletedBy = @DeletedBy
                 WHERE id = @id
                   AND IsDeleted = 0
                 """;
             command.Parameters.Add(new SqlParameter("@id", System.Data.SqlDbType.NVarChar, 64) { Value = id });
+            command.Parameters.Add(new SqlParameter("@DeletedBy", System.Data.SqlDbType.NVarChar, 100) { Value = (object?)deletedBy ?? DBNull.Value });
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
             return rowsAffected > 0;

@@ -11,7 +11,7 @@ namespace DER3.Api.Services
         Task<IReadOnlyList<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken);
         Task<PermissionGroupWriteResult> CreateAsync(CreatePermissionGroupRequestDto request, CancellationToken cancellationToken);
         Task<PermissionGroupWriteResult> UpdateAsync(string id, UpdatePermissionGroupRequestDto request, CancellationToken cancellationToken);
-        Task<PermissionGroupWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<PermissionGroupWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class PermissionGroupService : IPermissionGroupService
@@ -98,14 +98,14 @@ namespace DER3.Api.Services
                 : new PermissionGroupWriteResult(true, Item: item);
         }
 
-        public async Task<PermissionGroupWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<PermissionGroupWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new PermissionGroupWriteResult(false, "PermissionGroup id is required");
             }
 
-            var deleted = await _permissionGroupRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _permissionGroupRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new PermissionGroupWriteResult(true)
                 : new PermissionGroupWriteResult(false, "PermissionGroup not found");

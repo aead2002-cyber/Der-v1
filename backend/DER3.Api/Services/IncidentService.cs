@@ -11,7 +11,7 @@ namespace DER3.Api.Services
     {
         Task<IncidentWriteResult> CreateAsync(CreateIncidentRequestDto request, CancellationToken cancellationToken);
         Task<IncidentWriteResult> UpdateAsync(string id, UpdateIncidentRequestDto request, CancellationToken cancellationToken);
-        Task<IncidentWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<IncidentWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class IncidentService : IIncidentService
@@ -101,14 +101,14 @@ namespace DER3.Api.Services
                 : new IncidentWriteResult(true, Item: item);
         }
 
-        public async Task<IncidentWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<IncidentWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new IncidentWriteResult(false, "Incident id is required");
             }
 
-            var deleted = await _incidentRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _incidentRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new IncidentWriteResult(true)
                 : new IncidentWriteResult(false, "Incident not found");

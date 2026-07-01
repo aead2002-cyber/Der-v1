@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<NotificationLogWriteResult> CreateAsync(CreateNotificationLogRequestDto request, CancellationToken cancellationToken);
         Task<NotificationLogWriteResult> UpdateAsync(string id, UpdateNotificationLogRequestDto request, CancellationToken cancellationToken);
-        Task<NotificationLogWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<NotificationLogWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class NotificationLogService : INotificationLogService
@@ -90,14 +90,14 @@ namespace DER3.Api.Services
                 : new NotificationLogWriteResult(true, Item: item);
         }
 
-        public async Task<NotificationLogWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<NotificationLogWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new NotificationLogWriteResult(false, "NotificationLog id is required");
             }
 
-            var deleted = await _notificationLogRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _notificationLogRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new NotificationLogWriteResult(true)
                 : new NotificationLogWriteResult(false, "NotificationLog not found");

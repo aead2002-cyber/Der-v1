@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<EvidenceWriteResult> CreateAsync(CreateEvidenceRequestDto request, CancellationToken cancellationToken);
         Task<EvidenceWriteResult> UpdateAsync(string id, UpdateEvidenceRequestDto request, CancellationToken cancellationToken);
-        Task<EvidenceWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<EvidenceWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class EvidenceService : IEvidenceService
@@ -91,14 +91,14 @@ namespace DER3.Api.Services
                 : new EvidenceWriteResult(true, Item: item);
         }
 
-        public async Task<EvidenceWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<EvidenceWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new EvidenceWriteResult(false, "Evidence id is required");
             }
 
-            var deleted = await _evidenceRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _evidenceRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted ? new EvidenceWriteResult(true) : new EvidenceWriteResult(false, "Evidence not found");
         }
 

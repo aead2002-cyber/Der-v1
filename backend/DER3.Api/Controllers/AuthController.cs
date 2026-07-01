@@ -17,11 +17,16 @@ namespace DER3.Api.Controllers
         private const string InvalidOtpMessage = "Invalid or expired OTP";
         private readonly IOtpService _otpService;
         private readonly IPasswordResetService _passwordResetService;
+        private readonly IPlatformAccessService _platformAccessService;
 
-        public AuthController(IOtpService otpService, IPasswordResetService passwordResetService)
+        public AuthController(
+            IOtpService otpService,
+            IPasswordResetService passwordResetService,
+            IPlatformAccessService platformAccessService)
         {
             _otpService = otpService;
             _passwordResetService = passwordResetService;
+            _platformAccessService = platformAccessService;
         }
 
         [HttpPost("verify")]
@@ -179,6 +184,7 @@ namespace DER3.Api.Controllers
                 email = User.FindFirstValue(ClaimTypes.Email),
                 name = User.FindFirstValue(ClaimTypes.Name),
                 role = User.FindFirstValue(ClaimTypes.Role),
+                platforms = _platformAccessService.ResolvePlatforms(User),
                 claims
             });
         }

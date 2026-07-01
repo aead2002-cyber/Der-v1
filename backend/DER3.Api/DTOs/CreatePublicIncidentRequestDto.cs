@@ -11,6 +11,9 @@ namespace DER3.Api.DTOs
         public string? Type { get; set; }
         public string? Priority { get; set; }
         public List<string>? Attachments { get; set; }
+        public string? Honeypot { get; set; }
+        public DateTime? FormStartedAtUtc { get; set; }
+        public int? ClientElapsedMs { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, JsonElement>? UnknownFields { get; set; }

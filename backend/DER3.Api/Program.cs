@@ -1,6 +1,7 @@
 using DER3.Api.Data;
 using DER3.Api.Repositories;
 using DER3.Api.Services;
+using DER3.Api.Security;
 using DER3.Api.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -19,17 +20,19 @@ builder.Services.AddCors(options =>
     options.AddPolicy(LocalFrontendCorsPolicy, policy =>
     {
         policy
-          .WithOrigins(
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://localhost:3000",
-    "https://localhost:5173",
-    "http://10.10.12.117:3000")
+            .WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://localhost:3000",
+                "https://localhost:5173",
+                "http://172.16.10.19:3000",
+                "http://172.16.10.19", "http://myportal.mcci.org.sa")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<IAuthorizationHandler, Der3PlatformAuthorizationHandler>();
+builder.Services.AddScoped<IPlatformAccessService, PlatformAccessService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICompatibilityReadRepository, CompatibilityReadRepository>();
 builder.Services.AddScoped<ICompatibilityReadService, CompatibilityReadService>();
@@ -161,6 +164,14 @@ builder.Services
             }
         };
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .AddRequirements(new Der3PlatformRequirement())
+        .Build();
+});
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

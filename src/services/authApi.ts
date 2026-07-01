@@ -86,6 +86,9 @@ const normalizeUser = (value: unknown, fallbackEmail: string): User => {
     role: role === 'admin' || role === 'auditor' || role === 'user' ? role : 'user',
     teams: normalizeStringArray(record.teams),
     departments: normalizeStringArray(record.departments),
+    ...(record.platforms !== undefined && record.platforms !== null
+      ? { platforms: normalizeStringArray(record.platforms) as User['platforms'] }
+      : {}),
   };
 };
 

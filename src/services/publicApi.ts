@@ -6,6 +6,12 @@ export type PublicIncidentPayload = Pick<
   'reporterEmail' | 'title' | 'description' | 'type' | 'priority' | 'attachments'
 >;
 
+export type PublicIncidentAntiAbusePayload = {
+  honeypot?: string;
+  formStartedAtUtc?: string;
+  clientElapsedMs?: number;
+};
+
 interface WriteResponse {
   success?: boolean;
   item?: unknown;
@@ -26,7 +32,7 @@ export const publicApi = {
     return Array.isArray(response) ? response.map(normalizeLookupOption) : [];
   },
 
-  createIncident: async (incident: PublicIncidentPayload): Promise<SecurityIncident> => {
+  createIncident: async (incident: PublicIncidentPayload & PublicIncidentAntiAbusePayload): Promise<SecurityIncident> => {
     const response = await apiRequest<unknown>('/api/public/incidents', {
       method: 'POST',
       body: incident,

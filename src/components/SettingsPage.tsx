@@ -69,7 +69,7 @@ export default function SettingsPage() {
   // Delete Confirmation State
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
-  const [deleteType, setDeleteType] = useState<'dept' | 'team' | null>(null);
+  const [deleteType, setDeleteType] = useState<'dept' | 'team' | 'lookup' | null>(null);
 
   // Notifications State
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>({
@@ -306,10 +306,14 @@ export default function SettingsPage() {
           await departmentsApi.deleteDepartment(idToDelete);
           await refreshDepartments();
           toast.success(t('department_deleted_success') || 'Department deleted successfully');
-        } else {
+        } else if (deleteType === 'team') {
           await teamsApi.deleteTeam(idToDelete);
           await refreshTeams();
           toast.success(t('team_deleted_success') || 'Team deleted successfully');
+        } else {
+          await lookupOptionsApi.deleteLookupOption(idToDelete);
+          await refreshLookupOptions();
+          toast.success(isRtl ? 'طھظ… ط­ط°ظپ ط§ظ„ط®ظٹط§ط±' : 'Option deleted');
         }
         setIsDeleteConfirmOpen(false);
         setIdToDelete(null);
@@ -354,14 +358,9 @@ export default function SettingsPage() {
   };
 
   const handleDeleteLookupOption = async (id: string) => {
-    try {
-      await lookupOptionsApi.deleteLookupOption(id);
-      await refreshLookupOptions();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : (isRtl ? 'تعذر حذف الخيار' : 'Failed to delete option'));
-      return;
-    }
-    toast.success(isRtl ? 'تم حذف الخيار' : 'Option deleted');
+    setIdToDelete(id);
+    setDeleteType('lookup');
+    setIsDeleteConfirmOpen(true);
   };
 
   return (
@@ -1326,7 +1325,9 @@ export default function SettingsPage() {
             <p className="text-text-main font-medium">
               {deleteType === 'dept' 
                 ? (t('confirm_delete_department_desc') || 'Are you sure you want to delete this department?')
-                : (t('confirm_delete_team_desc') || 'Are you sure you want to delete this team?')}
+                : deleteType === 'team'
+                  ? (t('confirm_delete_team_desc') || 'Are you sure you want to delete this team?')
+                  : (isRtl ? 'هل أنت متأكد من حذف هذا الخيار؟' : 'Are you sure you want to delete this option?')}
             </p>
           </div>
           <DialogFooter className="gap-2">

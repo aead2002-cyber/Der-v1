@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<DepartmentWriteResult> CreateAsync(CreateDepartmentRequestDto request, CancellationToken cancellationToken);
         Task<DepartmentWriteResult> UpdateAsync(string id, UpdateDepartmentRequestDto request, CancellationToken cancellationToken);
-        Task<DepartmentWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<DepartmentWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class DepartmentService : IDepartmentService
@@ -90,14 +90,14 @@ namespace DER3.Api.Services
                 : new DepartmentWriteResult(true, Item: item);
         }
 
-        public async Task<DepartmentWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<DepartmentWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new DepartmentWriteResult(false, "Department id is required");
             }
 
-            var deleted = await _departmentRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _departmentRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new DepartmentWriteResult(true)
                 : new DepartmentWriteResult(false, "Department not found");

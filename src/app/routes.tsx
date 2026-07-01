@@ -5,6 +5,8 @@ import { ProtectedRoute } from '@/shared/guards/ProtectedRoute';
 import LoginPage from '@/components/LoginPage';
 import ResetPasswordPage from '@/components/ResetPasswordPage';
 import PublicReportPage from '@/components/PublicReportPage';
+import UnauthorizedPage from '@/components/UnauthorizedPage';
+import NotFoundPage from '@/components/NotFoundPage';
 import PlatformsPage from '@/pages/PlatformsPage';
 import { Der3Routes } from '@/modules/der3/routes';
 import { LegalRoutes } from '@/modules/legal/routes';
@@ -46,6 +48,7 @@ export function AppRoutes() {
         <Route path="/login" element={<LoginRedirect />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/report-incident" element={<PublicReportPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route
           path="/platforms"
           element={
@@ -56,7 +59,7 @@ export function AppRoutes() {
         />
         {Der3Routes()}
         {LegalRoutes()}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <Toaster position="top-center" />
     </>

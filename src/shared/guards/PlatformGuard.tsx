@@ -22,7 +22,7 @@ export function PlatformGuard({
 
   const platforms = user?.platforms || [];
   if (!user || !platforms.includes(platformCode)) {
-    return <Navigate to="/platforms" replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

@@ -2,7 +2,8 @@
 import { User } from './types';
 import { hasPermission } from './lib/permissionHelpers';
 import { tokenStorage } from './services/tokenStorage';
-import { applyTemporaryPlatformAccess } from '@/shared/auth/platformAccess';
+import { resolvePlatformAccess } from '@/shared/auth/platformAccess';
+import { usersApi } from '@/services/usersApi';
 
 interface AuthContextType {
   user: User | null;
@@ -21,9 +22,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = tokenStorage.getToken() ? tokenStorage.getUser() : null;
-    setUser(currentUser ? applyTemporaryPlatformAccess(currentUser) : null);
-    setLoading(false);
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      const currentUser = tokenStorage.getToken() ? tokenStorage.getUser() : null;
+      if (!currentUser) {
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const resolvedLocalUser = resolvePlatformAccess(currentUser);
+      if (!cancelled) {
+        setUser(resolvedLocalUser);
+      }
+
+      try {
+        const backendUser = await usersApi.getCurrentUser();
+        const resolvedBackendUser = resolvePlatformAccess(backendUser);
+        tokenStorage.setUser(resolvedBackendUser);
+        if (!cancelled) {
+          setUser(resolvedBackendUser);
+        }
+      } catch {
+        if (!cancelled) {
+          setUser(resolvedLocalUser);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const logout = () => {
@@ -34,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = (updates: Partial<User>) => {
     if (user) {
-      const updatedUser = applyTemporaryPlatformAccess({ ...user, ...updates });
+      const updatedUser = resolvePlatformAccess({ ...user, ...updates });
       tokenStorage.setUser(updatedUser);
       setUser(updatedUser);
     }

@@ -37,6 +37,13 @@ interface DeleteResponse {
   error?: string;
 }
 
+// Temporary client-side overlay for procedure hierarchy fields.
+// parentId, order, and weight are stored in localStorage only because the
+// backend/database does not currently persist procedure hierarchy. This is a
+// compatibility bridge for the UI, not the long-term source of truth.
+// Future persistence must add parentId, [order], and weight to dbo.Procedure
+// or move hierarchy into an equivalent relation table, then replace this overlay
+// with backend-backed storage and tested API behavior.
 const OVERLAY_KEY = 'der3_procedure_overlay_v1';
 
 export const proceduresApi = {

@@ -3,6 +3,7 @@ using DER3.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System.Security.Claims;
 
 namespace DER3.Api.Controllers
 {
@@ -109,7 +110,8 @@ namespace DER3.Api.Controllers
             // TODO: Add authorization before enabling standard classification deletion in production.
             try
             {
-                var result = await _standardClassificationService.DeleteAsync(id, cancellationToken);
+                var deletedBy = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var result = await _standardClassificationService.DeleteAsync(id, deletedBy, cancellationToken);
                 return result.Success
                     ? Ok(new { success = true })
                     : NotFound(new { success = false, error = result.Error });

@@ -19,7 +19,7 @@ namespace DER3.Api.Services
 
         Task<DownloadFileResult> DownloadAsync(string id, CancellationToken cancellationToken);
 
-        Task<FileServiceResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<FileServiceResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class FileService : IFileService
@@ -123,14 +123,14 @@ namespace DER3.Api.Services
                 OriginalName: file.OriginalName);
         }
 
-        public async Task<FileServiceResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<FileServiceResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new FileServiceResult(false, "File not found");
             }
 
-            var deleted = await _fileRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _fileRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new FileServiceResult(true)
                 : new FileServiceResult(false, "File not found");

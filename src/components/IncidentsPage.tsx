@@ -272,6 +272,8 @@ const IncidentsPage: React.FC = () => {
       await filesApi.openFile(value);
     } catch (error) {
       console.error('Failed to open incident attachment', error);
+      setPreviewFile(value);
+      setIsPreviewOpen(true);
       toast.error(isRtl ? 'تعذر فتح المرفق' : 'Could not open attachment');
     }
   };
@@ -834,15 +836,14 @@ const IncidentsPage: React.FC = () => {
                 <Paperclip className="w-12 h-12 text-slate-200" />
               </div>
               <h4 className="text-xl font-black text-slate-900 mb-2">
-                {isRtl ? 'معاينة الملف' : 'File Preview'}
+                {isRtl ? 'تعذر عرض الملف' : 'Preview Unavailable'}
               </h4>
               <p className="max-w-md text-slate-500 text-sm leading-relaxed mb-8">
-                {isRtl 
-                  ? `هذه معاينة تجريبية للملف (${previewFile}). في النظام الفعلي، سيتم عرض محتوى الملف هنا (صورة، PDF، أو مستند).` 
-                  : `This is a mock preview for the file (${previewFile}). In a real system, the actual file content (Image, PDF, or Document) would be displayed here.`}
+                {isRtl
+                  ? `لا يمكن عرض معاينة مضمنة لهذا الملف (${previewFile}) حالياً. يمكنك فتحه عبر المتصفح إذا كان النوع مدعوماً.`
+                  : `An inline preview is not available for this file (${previewFile}). You can still open it in the browser if supported.`}
               </p>
               <div className="flex gap-3">
-                <Button variant="outline" className="font-bold bg-white">{isRtl ? 'تحميل الملف' : 'Download File'}</Button>
                 <Button 
                   onClick={() => setIsPreviewOpen(false)}
                   className="bg-blue-600 hover:bg-blue-700 font-bold px-8"

@@ -11,7 +11,7 @@ namespace DER3.Api.Services
     {
         Task<ProcedureWriteResult> CreateAsync(CreateProcedureRequestDto request, CancellationToken cancellationToken);
         Task<ProcedureWriteResult> UpdateAsync(string id, UpdateProcedureRequestDto request, CancellationToken cancellationToken);
-        Task<ProcedureWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<ProcedureWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class ProcedureService : IProcedureService
@@ -119,14 +119,14 @@ namespace DER3.Api.Services
                 : new ProcedureWriteResult(true, Item: item);
         }
 
-        public async Task<ProcedureWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<ProcedureWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new ProcedureWriteResult(false, "Procedure id is required");
             }
 
-            var deleted = await _procedureRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _procedureRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new ProcedureWriteResult(true)
                 : new ProcedureWriteResult(false, "Procedure not found");

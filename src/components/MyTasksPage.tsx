@@ -4,7 +4,6 @@ import { auditLogsApi } from '@/services/auditLogsApi';
 import { changeRequestsApi } from '@/services/changeRequestsApi';
 import { commitmentsApi } from '@/services/commitmentsApi';
 import { frameworksApi } from '@/services/frameworksApi';
-import { incidentFeedbackApi } from '@/services/incidentFeedbackApi';
 import { incidentNotesApi } from '@/services/incidentNotesApi';
 import { incidentsApi } from '@/services/incidentsApi';
 import { lookupOptionsApi } from '@/services/lookupOptionsApi';
@@ -18,7 +17,7 @@ import { standardsApi } from '@/services/standardsApi';
 import { usersApi } from '@/services/usersApi';
 import { useTableSort } from './shared/useTableSort';
 import { SortableTableHead } from './shared/SortableTableHead';
-import { Procedure, Commitment, PolicyItem, SecurityIncident, IncidentFeedback, IncidentNote, Evidence, ChangeRequest, ChangeRequestStatus, ChangeRequestType, Notification, AuditLog, LookupOption } from '../types';
+import { Procedure, Commitment, PolicyItem, SecurityIncident, IncidentNote, Evidence, ChangeRequest, ChangeRequestStatus, ChangeRequestType, Notification, AuditLog, LookupOption } from '../types';
 import { useAuth } from '../AuthContext';
 import { Link } from 'react-router-dom';
 import {
@@ -488,14 +487,15 @@ export default function MyTasksPage() {
     setIsViewDetailsOpen(true);
   };
 
-  const handleViewAttachment = (value: string) => {
-    const url = resolveFileUrl(value);
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
+  const handleViewAttachment = async (value: string) => {
+    try {
+      await filesApi.openFile(value);
+    } catch (error) {
+      console.error('Failed to open attachment', error);
+      setPreviewFile(value);
+      setIsPreviewOpen(true);
+      toast.error(isRtl ? 'تعذر فتح المرفق' : 'Could not open attachment');
     }
-    setPreviewFile(value);
-    setIsPreviewOpen(true);
   };
 
   const attachmentLabel = (value: string) => {
@@ -698,11 +698,8 @@ export default function MyTasksPage() {
     }
   };
 
-  // Feedback simulation state
   const [closingIncidentId, setClosingIncidentId] = useState<string | null>(null);
   const [isClosingDialogOpen, setIsClosingDialogOpen] = useState(false);
-  const [feedbackRating, setFeedbackRating] = useState(5);
-  const [feedbackComment, setFeedbackComment] = useState('');
 
   const handleIncidentStatusChange = (incId: string, newStatus: string) => {
     const incident = myIncidents.find(i => i.id === incId);
@@ -725,7 +722,6 @@ export default function MyTasksPage() {
       setIsActionDialogOpen(false);
       setClosingIncidentId(selectedIncForAction.id);
       setIsClosingDialogOpen(true);
-      // We will save the note and attachments during the final resolution
     } else {
       const updated: SecurityIncident = { 
         ...selectedIncForAction, 
@@ -758,8 +754,13 @@ export default function MyTasksPage() {
   const confirmCloseIncident = async () => {
     if (!closingIncidentId || !selectedIncForAction) return;
     
-    const incident = (await incidentsApi.getIncidents()).find(i => i.id === closingIncidentId);
-    if (incident) {
+    try {
+      const incident = (await incidentsApi.getIncidents()).find(i => i.id === closingIncidentId);
+      if (!incident) {
+        toast.error(isRtl ? 'تعذر العثور على البلاغ' : 'Incident not found');
+        return;
+      }
+
       const updated: SecurityIncident = { 
         ...incident, 
         status: 'resolved', 
@@ -778,23 +779,15 @@ export default function MyTasksPage() {
         attachments: actionAttachments
       };
       await incidentNotesApi.createIncidentNote(note);
-
-      // Auto-generate feedback (simulating the reporter's response)
-      const feedback: IncidentFeedback = {
-        id: Math.random().toString(36).substr(2, 9),
-        incidentId: closingIncidentId,
-        rating: feedbackRating,
-        comment: feedbackComment || (isRtl ? 'شكراً لكم على سرعة الاستجابة تم حل المشكلة' : 'Thank you for the quick response, the problem is resolved'),
-        submittedAt: new Date().toISOString()
-      };
-      await incidentFeedbackApi.createIncidentFeedback(feedback);
       
       setIsClosingDialogOpen(false);
       setClosingIncidentId(null);
       setSelectedIncForAction(null);
-      setFeedbackComment('');
       await refreshData();
-      toast.success(isRtl ? 'تم وضع الحالة "تم الحل" وتسجيل التقييم المحاكى' : 'Status set to "Resolved" and simulated feedback recorded');
+      toast.success(isRtl ? 'تم وضع الحالة "تم الحل" بنجاح' : 'Status set to "Resolved" successfully');
+    } catch (error) {
+      console.error('Failed to resolve incident', error);
+      toast.error(isRtl ? 'تعذر إغلاق البلاغ' : 'Could not resolve incident');
     }
   };
 
@@ -2454,15 +2447,14 @@ export default function MyTasksPage() {
                 <Paperclip className="w-12 h-12 text-slate-200" />
               </div>
               <h4 className="text-xl font-black text-slate-900 mb-2">
-                {isRtl ? 'معاينة الملف' : 'File Preview'}
+                {isRtl ? 'تعذر عرض الملف' : 'Preview Unavailable'}
               </h4>
               <p className="max-w-md text-slate-500 text-sm leading-relaxed mb-8">
-                {isRtl 
-                  ? `هذه معاينة تجريبية للملف (${previewFile}). في النظام الفعلي، سيتم عرض محتوى الملف هنا (صورة، PDF، أو مستند).` 
-                  : `This is a mock preview for the file (${previewFile}). In a real system, the actual file content (Image, PDF, or Document) would be displayed here.`}
+                {isRtl
+                  ? `لا يمكن عرض معاينة مضمنة لهذا الملف (${previewFile}) حالياً. يمكنك فتحه عبر المتصفح أو تنزيله إذا كان النوع مدعوماً.`
+                  : `An inline preview is not available for this file (${previewFile}). You can still open it in the browser if supported.`}
               </p>
               <div className="flex gap-3">
-                <Button variant="outline" className="font-bold bg-white">{isRtl ? 'تحميل الملف' : 'Download File'}</Button>
                 <Button 
                   onClick={() => setIsPreviewOpen(false)}
                   className="bg-blue-600 hover:bg-blue-700 font-bold px-8"
@@ -2692,7 +2684,7 @@ export default function MyTasksPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Closing Incident Dialog (Feedback Simulation) */}
+      {/* Closing Incident Dialog */}
       <Dialog open={isClosingDialogOpen} onOpenChange={setIsClosingDialogOpen}>
         <DialogContent className="max-w-md bg-white border-none shadow-2xl p-0" dir={isRtl ? 'rtl' : 'ltr'}>
           <div className="h-1.5 bg-slate-900" />
@@ -2700,47 +2692,27 @@ export default function MyTasksPage() {
             <DialogHeader>
               <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                {isRtl ? 'حل البلاغ والتقييم' : 'Resolve Incident & Feedback'}
+                {isRtl ? 'تأكيد حل البلاغ' : 'Confirm Incident Resolution'}
               </DialogTitle>
               <DialogDescription className="font-medium text-slate-500">
-                {isRtl 
-                  ? 'عند حل البلاغ، سيتم إرسال طلب تقييم للمبلغ. للمحاكاة، يرجى إدخال التقييم المتوقع.' 
-                  : 'When resolving the incident, a feedback request is sent. For simulation, please enter the expected feedback.'}
+                {isRtl
+                  ? 'سيتم حفظ حالة البلاغ كـ "تم الحل" مع الملاحظة التي أضفتها سابقاً.'
+                  : 'This will save the incident as resolved along with the note you already added.'}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                  {isRtl ? 'التقييم (1-5)' : 'Rating (1-5)'}
-                </Label>
-                <div className="flex items-center gap-2 justify-center py-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button 
-                      key={star} 
-                      onClick={() => setFeedbackRating(star)}
-                      className="p-1 transition-transform hover:scale-125"
-                    >
-                      <Star className={cn(
-                        "w-8 h-8 transition-colors",
-                        star <= feedbackRating ? "fill-amber-400 text-amber-400" : "text-slate-200"
-                      )} />
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-3 pt-4">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                  {isRtl ? 'ملاحظة الإجراء' : 'Action Note'}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                  {actionNote || (isRtl ? 'لا توجد ملاحظة مضافة.' : 'No note was added.')}
+                </p>
               </div>
-
-              <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                  {isRtl ? 'تعليق المبلغ المحاكى' : 'Simulated Reporter Comment'}
-                </Label>
-                <Textarea 
-                  placeholder={isRtl ? 'أدخل تعليق المبلغ هنا...' : 'Enter reporter comment here...'}
-                  value={feedbackComment}
-                  onChange={(e) => setFeedbackComment(e.target.value)}
-                  className="min-h-[100px] border-slate-200 focus:ring-slate-900"
-                />
-              </div>
+              <p className="text-xs text-slate-500">
+                {isRtl ? 'لن يتم إنشاء تقييم محاكى من المبلغ.' : 'No simulated reporter feedback will be created.'}
+              </p>
             </div>
 
             <DialogFooter className="pt-6 sm:justify-between gap-3">

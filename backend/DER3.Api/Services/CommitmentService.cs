@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<CommitmentWriteResult> CreateAsync(CreateCommitmentRequestDto request, CancellationToken cancellationToken);
         Task<CommitmentWriteResult> UpdateAsync(string id, UpdateCommitmentRequestDto request, CancellationToken cancellationToken);
-        Task<CommitmentWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<CommitmentWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class CommitmentService : ICommitmentService
@@ -104,14 +104,14 @@ namespace DER3.Api.Services
                 : new CommitmentWriteResult(true, Item: item);
         }
 
-        public async Task<CommitmentWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<CommitmentWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new CommitmentWriteResult(false, "Commitment id is required");
             }
 
-            var deleted = await _commitmentRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _commitmentRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted ? new CommitmentWriteResult(true) : new CommitmentWriteResult(false, "Commitment not found");
         }
 

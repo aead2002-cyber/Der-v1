@@ -13,7 +13,7 @@ namespace DER3.Api.Services
 
         Task<PolicyWriteResult> UpdateAsync(string id, UpdatePolicyRequestDto request, CancellationToken cancellationToken);
 
-        Task<PolicyWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<PolicyWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class PolicyService : IPolicyService
@@ -145,14 +145,14 @@ namespace DER3.Api.Services
                 : new PolicyWriteResult(true, Item: item);
         }
 
-        public async Task<PolicyWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<PolicyWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new PolicyWriteResult(false, "Policy id is required");
             }
 
-            var deleted = await _policyRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _policyRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new PolicyWriteResult(true)
                 : new PolicyWriteResult(false, "Policy not found");

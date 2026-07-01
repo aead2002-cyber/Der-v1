@@ -17,7 +17,7 @@ namespace DER3.Api.Repositories
     {
         Task<Dictionary<string, object?>?> InsertAsync(IncidentNoteRecord note, CancellationToken cancellationToken);
         Task<Dictionary<string, object?>?> UpdateAsync(string id, IReadOnlyDictionary<string, object?> fields, CancellationToken cancellationToken);
-        Task<bool> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class IncidentNoteRepository : IIncidentNoteRepository
@@ -68,7 +68,7 @@ namespace DER3.Api.Repositories
             return rowsAffected == 0 ? null : await FindByIdAsync(connection, id, cancellationToken);
         }
 
-        public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<bool> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
@@ -76,11 +76,12 @@ namespace DER3.Api.Repositories
                 UPDATE IncidentNote
                 SET IsDeleted = 1,
                     DeletedAt = SYSUTCDATETIME(),
-                    DeletedBy = NULL
+                    DeletedBy = @DeletedBy
                 WHERE id = @id
                   AND IsDeleted = 0
                 """;
             AddNVarChar(command, "@id", 64, id);
+            AddNVarChar(command, "@DeletedBy", 100, deletedBy);
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
             return rowsAffected > 0;

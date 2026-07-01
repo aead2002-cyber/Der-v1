@@ -16,10 +16,17 @@ type UserPayload = Pick<User, 'uid' | 'email' | 'displayName' | 'displayNameEn' 
   permissionOverrides?: User['permissionOverrides'];
 };
 
+type ProfilePayload = Pick<User, 'displayName' | 'displayNameEn' | 'photoURL'>;
+
 export const usersApi = {
   getUsers: async (): Promise<User[]> => {
     const response = await apiRequest<unknown>('/api/users');
     return Array.isArray(response) ? response.map(normalizeUser) : [];
+  },
+
+  getCurrentUser: async (): Promise<User> => {
+    const response = await apiRequest<unknown>('/api/users/me');
+    return unwrapUser(response);
   },
 
   createUser: async (user: UserPayload & { password?: string }): Promise<User> => {
@@ -34,6 +41,14 @@ export const usersApi = {
     const response = await apiRequest<unknown>(`/api/users/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: user,
+    });
+    return unwrapUser(response);
+  },
+
+  updateCurrentUserProfile: async (profile: ProfilePayload): Promise<User> => {
+    const response = await apiRequest<unknown>('/api/users/me/profile', {
+      method: 'PUT',
+      body: profile,
     });
     return unwrapUser(response);
   },
@@ -94,6 +109,9 @@ const normalizeUser = (value: unknown): User => {
     departments: stringArrayValue(item.departments),
     photoURL: optionalStringValue(item.photoURL),
     receiveSecurityIncidents: booleanValue(item.receiveSecurityIncidents),
+    ...(item.platforms !== undefined && item.platforms !== null
+      ? { platforms: stringArrayValue(item.platforms) as User['platforms'] }
+      : {}),
   };
 };
 

@@ -41,6 +41,11 @@ namespace DER3.Api.Repositories
         bool BypassOtp,
         bool ReceiveSecurityIncidents);
 
+    public sealed record UpdateMyProfileRecord(
+        string DisplayName,
+        string? DisplayNameEn,
+        string? PhotoURL);
+
     public interface IUserRepository
     {
         Task<UserAuthRecord?> FindAuthByEmailAsync(string email, CancellationToken cancellationToken);
@@ -51,9 +56,11 @@ namespace DER3.Api.Repositories
 
         Task<Dictionary<string, object?>?> UpdateUserAsync(string uid, UpdateUserRecord user, CancellationToken cancellationToken);
 
+        Task<Dictionary<string, object?>?> UpdateMyProfileAsync(string uid, UpdateMyProfileRecord user, CancellationToken cancellationToken);
+
         Task<bool> SetPasswordAsync(string uid, string passwordHash, string passwordSalt, CancellationToken cancellationToken);
 
-        Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken);
+        Task<bool> DeleteAsync(string uid, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class UserRepository : IUserRepository
@@ -206,6 +213,36 @@ namespace DER3.Api.Repositories
             return await FindUserByUidAsync(connection, uid, cancellationToken);
         }
 
+        public async Task<Dictionary<string, object?>?> UpdateMyProfileAsync(string uid, UpdateMyProfileRecord user, CancellationToken cancellationToken)
+        {
+            await using var connection = await OpenConnectionAsync(cancellationToken);
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                UPDATE [User]
+                SET
+                    displayName = @displayName,
+                    displayNameEn = @displayNameEn,
+                    photoURL = @photoURL,
+                    updatedAt = @now
+                WHERE uid = @uid AND IsDeleted = 0
+                """;
+
+            command.Parameters.Add(new SqlParameter("@uid", uid));
+            command.Parameters.Add(new SqlParameter("@displayName", user.DisplayName));
+            command.Parameters.Add(new SqlParameter("@displayNameEn", (object?)user.DisplayNameEn ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@photoURL", (object?)user.PhotoURL ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@now", DateTime.UtcNow));
+
+            var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+            if (rowsAffected == 0)
+            {
+                return null;
+            }
+
+            return await FindUserByUidAsync(connection, uid, cancellationToken);
+        }
+
         public async Task<bool> SetPasswordAsync(string uid, string passwordHash, string passwordSalt, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
@@ -227,7 +264,7 @@ namespace DER3.Api.Repositories
             return rowsAffected > 0;
         }
 
-        public async Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken)
+        public async Task<bool> DeleteAsync(string uid, string? deletedBy, CancellationToken cancellationToken)
         {
             await using var connection = await OpenConnectionAsync(cancellationToken);
 
@@ -236,11 +273,12 @@ namespace DER3.Api.Repositories
                 UPDATE [User]
                 SET IsDeleted = 1,
                     DeletedAt = SYSUTCDATETIME(),
-                    DeletedBy = NULL
+                    DeletedBy = @DeletedBy
                 WHERE uid = @uid
                   AND IsDeleted = 0
                 """;
             command.Parameters.Add(new SqlParameter("@uid", uid));
+            command.Parameters.Add(new SqlParameter("@DeletedBy", (object?)deletedBy ?? DBNull.Value));
 
             var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
             return rowsAffected > 0;

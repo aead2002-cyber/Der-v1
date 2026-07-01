@@ -19,3 +19,7 @@ export const applyTemporaryPlatformAccess = (user: User): User => {
   const platforms = user.platforms?.length ? user.platforms : getTemporaryPlatformAccess(user.email);
   return { ...user, platforms };
 };
+
+export const resolvePlatformAccess = (user: User): User => {
+  return Object.prototype.hasOwnProperty.call(user, 'platforms') ? user : applyTemporaryPlatformAccess(user);
+};

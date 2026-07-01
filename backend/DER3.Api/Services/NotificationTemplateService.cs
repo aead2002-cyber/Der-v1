@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<NotificationTemplateWriteResult> CreateAsync(CreateNotificationTemplateRequestDto request, CancellationToken cancellationToken);
         Task<NotificationTemplateWriteResult> UpdateAsync(string id, UpdateNotificationTemplateRequestDto request, CancellationToken cancellationToken);
-        Task<NotificationTemplateWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<NotificationTemplateWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class NotificationTemplateService : INotificationTemplateService
@@ -85,14 +85,14 @@ namespace DER3.Api.Services
                 : new NotificationTemplateWriteResult(true, Item: item);
         }
 
-        public async Task<NotificationTemplateWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<NotificationTemplateWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new NotificationTemplateWriteResult(false, "NotificationTemplate id is required");
             }
 
-            var deleted = await _notificationTemplateRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _notificationTemplateRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new NotificationTemplateWriteResult(true)
                 : new NotificationTemplateWriteResult(false, "NotificationTemplate not found");

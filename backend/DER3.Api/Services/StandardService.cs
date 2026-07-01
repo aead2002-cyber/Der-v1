@@ -11,7 +11,7 @@ namespace DER3.Api.Services
     {
         Task<StandardWriteResult> CreateAsync(CreateStandardRequestDto request, CancellationToken cancellationToken);
         Task<StandardWriteResult> UpdateAsync(string id, UpdateStandardRequestDto request, CancellationToken cancellationToken);
-        Task<StandardWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<StandardWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class StandardService : IStandardService
@@ -107,14 +107,14 @@ namespace DER3.Api.Services
                 : new StandardWriteResult(true, Item: item);
         }
 
-        public async Task<StandardWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<StandardWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new StandardWriteResult(false, "Standard id is required");
             }
 
-            var deleted = await _standardRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _standardRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new StandardWriteResult(true)
                 : new StandardWriteResult(false, "Standard not found");

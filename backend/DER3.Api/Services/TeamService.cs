@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<TeamWriteResult> CreateAsync(CreateTeamRequestDto request, CancellationToken cancellationToken);
         Task<TeamWriteResult> UpdateAsync(string id, UpdateTeamRequestDto request, CancellationToken cancellationToken);
-        Task<TeamWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<TeamWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class TeamService : ITeamService
@@ -90,14 +90,14 @@ namespace DER3.Api.Services
                 : new TeamWriteResult(true, Item: item);
         }
 
-        public async Task<TeamWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<TeamWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new TeamWriteResult(false, "Team id is required");
             }
 
-            var deleted = await _teamRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _teamRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted ? new TeamWriteResult(true) : new TeamWriteResult(false, "Team not found");
         }
 

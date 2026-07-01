@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<StandardClassificationWriteResult> CreateAsync(CreateStandardClassificationRequestDto request, CancellationToken cancellationToken);
         Task<StandardClassificationWriteResult> UpdateAsync(string id, UpdateStandardClassificationRequestDto request, CancellationToken cancellationToken);
-        Task<StandardClassificationWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<StandardClassificationWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class StandardClassificationService : IStandardClassificationService
@@ -86,14 +86,14 @@ namespace DER3.Api.Services
                 : new StandardClassificationWriteResult(true, Item: item);
         }
 
-        public async Task<StandardClassificationWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<StandardClassificationWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new StandardClassificationWriteResult(false, "StandardClassification id is required");
             }
 
-            var deleted = await _standardClassificationRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _standardClassificationRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new StandardClassificationWriteResult(true)
                 : new StandardClassificationWriteResult(false, "StandardClassification not found");

@@ -19,10 +19,12 @@ namespace DER3.Api.Services
     public sealed class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IPlatformAccessService _platformAccessService;
 
-        public AuthService(IUserRepository userRepository)
+        public AuthService(IUserRepository userRepository, IPlatformAccessService platformAccessService)
         {
             _userRepository = userRepository;
+            _platformAccessService = platformAccessService;
         }
 
         public async Task<AuthenticatedUser?> VerifyAsync(string email, string password, CancellationToken cancellationToken)
@@ -44,7 +46,7 @@ namespace DER3.Api.Services
             var passwordIsValid = VerifyPasswordHash(password, user.PasswordSalt!, user.PasswordHash!);
 
             return passwordIsValid
-                ? new AuthenticatedUser(user.Uid, user.Email, user.DisplayName, user.Role, user.User)
+                ? new AuthenticatedUser(user.Uid, user.Email, user.DisplayName, user.Role, _platformAccessService.WithPlatforms(user.User))
                 : null;
         }
 

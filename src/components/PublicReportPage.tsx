@@ -43,6 +43,7 @@ const PublicReportPage: React.FC = () => {
   const [humanVerified, setHumanVerified] = useState(false);
   const [verifyingHuman, setVerifyingHuman] = useState(false);
   const [honeypot, setHoneypot] = useState('');
+  const formStartedAtRef = React.useRef<string>(new Date().toISOString());
   const mountTimeRef = React.useRef<number>(Date.now());
   const interactedRef = React.useRef<boolean>(false);
 
@@ -122,7 +123,10 @@ const PublicReportPage: React.FC = () => {
         description,
         type,
         priority,
-        attachments
+        attachments,
+        honeypot,
+        formStartedAtUtc: formStartedAtRef.current,
+        clientElapsedMs: Date.now() - mountTimeRef.current
       });
 
       setReportId(incident.id);

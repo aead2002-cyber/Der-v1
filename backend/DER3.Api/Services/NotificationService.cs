@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<NotificationWriteResult> CreateAsync(CreateNotificationRequestDto request, CancellationToken cancellationToken);
         Task<NotificationWriteResult> UpdateAsync(string id, UpdateNotificationRequestDto request, CancellationToken cancellationToken);
-        Task<NotificationWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<NotificationWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class NotificationService : INotificationService
@@ -90,14 +90,14 @@ namespace DER3.Api.Services
                 : new NotificationWriteResult(true, Item: item);
         }
 
-        public async Task<NotificationWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<NotificationWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new NotificationWriteResult(false, "Notification id is required");
             }
 
-            var deleted = await _notificationRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _notificationRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new NotificationWriteResult(true)
                 : new NotificationWriteResult(false, "Notification not found");

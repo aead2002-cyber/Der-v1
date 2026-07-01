@@ -3,6 +3,7 @@ using DER3.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System.Security.Claims;
 
 namespace DER3.Api.Controllers
 {
@@ -115,7 +116,8 @@ namespace DER3.Api.Controllers
             // TODO: Add authorization before enabling policy item deletion in production.
             try
             {
-                var result = await _policyItemService.DeleteAsync(id, cancellationToken);
+                var deletedBy = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var result = await _policyItemService.DeleteAsync(id, deletedBy, cancellationToken);
                 return result.Success
                     ? Ok(new { success = true })
                     : NotFound(new { success = false, error = result.Error });

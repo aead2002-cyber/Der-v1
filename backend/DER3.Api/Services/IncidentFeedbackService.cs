@@ -9,7 +9,7 @@ namespace DER3.Api.Services
     {
         Task<IncidentFeedbackWriteResult> CreateAsync(CreateIncidentFeedbackRequestDto request, CancellationToken cancellationToken);
         Task<IncidentFeedbackWriteResult> UpdateAsync(string id, UpdateIncidentFeedbackRequestDto request, CancellationToken cancellationToken);
-        Task<IncidentFeedbackWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<IncidentFeedbackWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class IncidentFeedbackService : IIncidentFeedbackService
@@ -94,14 +94,14 @@ namespace DER3.Api.Services
                 : new IncidentFeedbackWriteResult(true, Item: item);
         }
 
-        public async Task<IncidentFeedbackWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<IncidentFeedbackWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new IncidentFeedbackWriteResult(false, "Incident feedback id is required");
             }
 
-            var deleted = await _incidentFeedbackRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _incidentFeedbackRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted
                 ? new IncidentFeedbackWriteResult(true)
                 : new IncidentFeedbackWriteResult(false, "Incident feedback not found");

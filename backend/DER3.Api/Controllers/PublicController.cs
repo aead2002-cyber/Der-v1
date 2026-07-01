@@ -3,6 +3,7 @@ using DER3.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System.Net.Mail;
 
 namespace DER3.Api.Controllers
 {
@@ -25,6 +26,12 @@ namespace DER3.Api.Controllers
             "incident_type"
         };
 
+        private const int MinimumSubmissionAgeMs = 1500;
+        private const int MaxSubmissionsPerWindow = 5;
+        private static readonly TimeSpan SubmissionWindow = TimeSpan.FromMinutes(10);
+        private static readonly object SubmissionThrottleLock = new();
+        private static readonly Dictionary<string, SubmissionThrottleState> SubmissionThrottle = new(StringComparer.OrdinalIgnoreCase);
+
         private readonly IIncidentService _incidentService;
         private readonly IFileService _fileService;
         private readonly ILookupOptionService _lookupOptionService;
@@ -42,6 +49,7 @@ namespace DER3.Api.Controllers
         [HttpPost("incidents")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status429TooManyRequests)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateIncident(
             [FromBody] CreatePublicIncidentRequestDto request,
@@ -59,6 +67,41 @@ namespace DER3.Api.Controllers
                 return BadRequest(new { success = false, error = "reporterEmail, title and description are required" });
             }
 
+            var reporterEmail = request.ReporterEmail.Trim();
+            if (!IsValidEmail(reporterEmail))
+            {
+                return BadRequest(new { success = false, error = "reporterEmail is invalid" });
+            }
+
+            var title = request.Title.Trim();
+            var description = request.Description.Trim();
+            if (!HasMeaningfulText(title, 3) || !HasMeaningfulText(description, 10))
+            {
+                return BadRequest(new { success = false, error = "title and description must contain meaningful text" });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Honeypot))
+            {
+                return BadRequest(new { success = false, error = "Submission was rejected" });
+            }
+
+            if (!IsTimingValid(request, out var timingError))
+            {
+                return BadRequest(new { success = false, error = timingError });
+            }
+
+            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!string.IsNullOrWhiteSpace(remoteIp) &&
+                !TryRegisterSubmission(remoteIp, out var retryAfterSeconds))
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    error = "Too many submissions from this IP address",
+                    retryAfterSeconds
+                });
+            }
+
             var priority = string.IsNullOrWhiteSpace(request.Priority) ? "medium" : request.Priority.Trim().ToLowerInvariant();
             if (!AllowedPriorities.Contains(priority))
             {
@@ -71,9 +114,9 @@ namespace DER3.Api.Controllers
                 var result = await _incidentService.CreateAsync(
                     new CreateIncidentRequestDto
                     {
-                        ReporterEmail = request.ReporterEmail,
-                        Title = request.Title,
-                        Description = request.Description,
+                        ReporterEmail = reporterEmail,
+                        Title = title,
+                        Description = description,
                         Type = IncidentService.NormalizeOptionalString(request.Type) ?? "other",
                         Priority = priority,
                         Status = "new",
@@ -109,6 +152,124 @@ namespace DER3.Api.Controllers
                 return StatusCode(500, new { success = false, error = "Incident storage is not configured" });
             }
         }
+
+        private static bool IsValidEmail(string value)
+        {
+            try
+            {
+                _ = new MailAddress(value);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool HasMeaningfulText(string value, int minLength)
+        {
+            var trimmed = value.Trim();
+            if (trimmed.Length < minLength)
+            {
+                return false;
+            }
+
+            if (trimmed.All(char.IsWhiteSpace))
+            {
+                return false;
+            }
+
+            var alphanumericCount = trimmed.Count(char.IsLetterOrDigit);
+            if (alphanumericCount < 3)
+            {
+                return false;
+            }
+
+            if (trimmed.Distinct().Count() <= 2)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsTimingValid(CreatePublicIncidentRequestDto request, out string error)
+        {
+            error = "Submission timing is required";
+
+            var now = DateTime.UtcNow;
+            var elapsedMs = request.ClientElapsedMs;
+            var start = request.FormStartedAtUtc;
+
+            if (elapsedMs is null && start is null)
+            {
+                return false;
+            }
+
+            if (elapsedMs is < 0)
+            {
+                error = "Submission timing is invalid";
+                return false;
+            }
+
+            if (elapsedMs is not null && elapsedMs < MinimumSubmissionAgeMs)
+            {
+                error = "Submission was sent too quickly";
+                return false;
+            }
+
+            if (start is not null)
+            {
+                var observedElapsed = now - start.Value.ToUniversalTime();
+                if (observedElapsed < TimeSpan.Zero)
+                {
+                    error = "Submission timing is invalid";
+                    return false;
+                }
+
+                if (observedElapsed.TotalMilliseconds < MinimumSubmissionAgeMs)
+                {
+                    error = "Submission was sent too quickly";
+                    return false;
+                }
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static bool TryRegisterSubmission(string remoteIp, out int retryAfterSeconds)
+        {
+            lock (SubmissionThrottleLock)
+            {
+                var now = DateTimeOffset.UtcNow;
+                if (!SubmissionThrottle.TryGetValue(remoteIp, out var state))
+                {
+                    SubmissionThrottle[remoteIp] = new SubmissionThrottleState(now, 1);
+                    retryAfterSeconds = 0;
+                    return true;
+                }
+
+                if (now - state.WindowStartUtc > SubmissionWindow)
+                {
+                    SubmissionThrottle[remoteIp] = new SubmissionThrottleState(now, 1);
+                    retryAfterSeconds = 0;
+                    return true;
+                }
+
+                if (state.Count >= MaxSubmissionsPerWindow)
+                {
+                    retryAfterSeconds = (int)Math.Ceiling((SubmissionWindow - (now - state.WindowStartUtc)).TotalSeconds);
+                    return false;
+                }
+
+                SubmissionThrottle[remoteIp] = state with { Count = state.Count + 1 };
+                retryAfterSeconds = 0;
+                return true;
+            }
+        }
+
+        private sealed record SubmissionThrottleState(DateTimeOffset WindowStartUtc, int Count);
 
         [HttpPost("uploads")]
         [Consumes("multipart/form-data")]

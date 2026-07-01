@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DER3.Api.Controllers
 {
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     [Route("api/[controller]")]
     [Produces("application/json")]
     public class HealthController : ControllerBase

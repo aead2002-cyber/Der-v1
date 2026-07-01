@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/AuthContext';
 import { PLATFORMS } from '@/shared/config/platforms';
 import { PlatformCard } from '@/shared/components/PlatformCard';
-import { applyTemporaryPlatformAccess } from '@/shared/auth/platformAccess';
+import { resolvePlatformAccess } from '@/shared/auth/platformAccess';
 import type { Platform } from '@/shared/types/platform';
 import { PlatformLayout } from '@/shared/layout/PlatformLayout';
 
@@ -15,11 +15,7 @@ export default function PlatformsPage() {
   const isRtl = i18n.language === 'ar';
 
   const permittedPlatforms = React.useMemo(() => {
-    const platforms = user?.platforms?.length
-      ? user.platforms
-      : user
-        ? applyTemporaryPlatformAccess(user).platforms || []
-        : [];
+    const platforms = user ? resolvePlatformAccess(user).platforms || [] : [];
 
     return PLATFORMS.filter(platform => platform.isActive && platforms.includes(platform.code));
   }, [user]);

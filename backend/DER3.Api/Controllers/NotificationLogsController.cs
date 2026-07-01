@@ -3,6 +3,7 @@ using DER3.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System.Security.Claims;
 
 namespace DER3.Api.Controllers
 {
@@ -112,7 +113,8 @@ namespace DER3.Api.Controllers
             // TODO: Restrict notification log access later.
             try
             {
-                var result = await _notificationLogService.DeleteAsync(id, cancellationToken);
+                var deletedBy = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var result = await _notificationLogService.DeleteAsync(id, deletedBy, cancellationToken);
                 return result.Success
                     ? Ok(new { success = true })
                     : NotFound(new { success = false, error = result.Error });

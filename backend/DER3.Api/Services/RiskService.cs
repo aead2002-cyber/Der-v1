@@ -10,7 +10,7 @@ namespace DER3.Api.Services
     {
         Task<RiskWriteResult> CreateAsync(CreateRiskRequestDto request, CancellationToken cancellationToken);
         Task<RiskWriteResult> UpdateAsync(string id, UpdateRiskRequestDto request, CancellationToken cancellationToken);
-        Task<RiskWriteResult> DeleteAsync(string id, CancellationToken cancellationToken);
+        Task<RiskWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken);
     }
 
     public sealed class RiskService : IRiskService
@@ -96,14 +96,14 @@ namespace DER3.Api.Services
                 : new RiskWriteResult(true, Item: item);
         }
 
-        public async Task<RiskWriteResult> DeleteAsync(string id, CancellationToken cancellationToken)
+        public async Task<RiskWriteResult> DeleteAsync(string id, string? deletedBy, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return new RiskWriteResult(false, "Risk id is required");
             }
 
-            var deleted = await _riskRepository.DeleteAsync(id.Trim(), cancellationToken);
+            var deleted = await _riskRepository.DeleteAsync(id.Trim(), deletedBy, cancellationToken);
             return deleted ? new RiskWriteResult(true) : new RiskWriteResult(false, "Risk not found");
         }
 
