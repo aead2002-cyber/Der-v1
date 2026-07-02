@@ -128,7 +128,7 @@ export default function CaseSessionsPage() {
       <LegalPageHeader
         title="جلسات القضايا"
         subtitle="عرض الجلسات القانونية وما يرتبط بها من مواعيد ومتابعات."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة جلسة</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة جلسة</Button>}
       />
 
       <LegalDataTable
@@ -145,8 +145,8 @@ export default function CaseSessionsPage() {
         ]}
         rowActions={session => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(session)}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(session)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(session)}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(session)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -158,36 +158,36 @@ export default function CaseSessionsPage() {
             <div className="space-y-2">
               <Label>القضية</Label>
               <Select value={form.caseId} onValueChange={value => setForm(prev => ({ ...prev, caseId: value }))}>
-                <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختر القضية" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختر القضية" /></SelectTrigger>
                 <SelectContent>{cases.map(item => <SelectItem key={item.id} value={item.id}>{item.internalCaseNumber}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>تاريخ ووقت الجلسة</Label>
-              <Input type="datetime-local" value={form.sessionDateTime} onChange={event => setForm(prev => ({ ...prev, sessionDateTime: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+              <Input type="datetime-local" value={form.sessionDateTime} onChange={event => setForm(prev => ({ ...prev, sessionDateTime: event.target.value }))} className="h-11 rounded-2xl" />
             </div>
             <div className="space-y-2">
               <Label>مكان الجلسة</Label>
-              <Input value={form.location} onChange={event => setForm(prev => ({ ...prev, location: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+              <Input value={form.location} onChange={event => setForm(prev => ({ ...prev, location: event.target.value }))} className="h-11 rounded-2xl" />
             </div>
             <div className="space-y-2">
               <Label>نتيجة الجلسة</Label>
               <Select value={form.judgmentStatus} onValueChange={value => setForm(prev => ({ ...prev, judgmentStatus: value as LegalSessionJudgmentStatus }))}>
-                <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
                 <SelectContent>{Object.entries(judgmentLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>الحضور</Label>
-              <Input value={form.attendees} onChange={event => setForm(prev => ({ ...prev, attendees: event.target.value }))} className="h-11 rounded-2xl border-slate-200" placeholder="u-1, u-2" />
+              <Input value={form.attendees} onChange={event => setForm(prev => ({ ...prev, attendees: event.target.value }))} className="h-11 rounded-2xl" placeholder="u-1, u-2" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>صفة الحضور</Label>
-              <Input value={form.attendeeRoles} onChange={event => setForm(prev => ({ ...prev, attendeeRoles: event.target.value }))} className="h-11 rounded-2xl border-slate-200" placeholder={attendeeRoleLabels.join(', ')} />
+              <Input value={form.attendeeRoles} onChange={event => setForm(prev => ({ ...prev, attendeeRoles: event.target.value }))} className="h-11 rounded-2xl" placeholder={attendeeRoleLabels.join(', ')} />
             </div>
             <div className="space-y-2">
               <Label>الجلسة القادمة</Label>
-              <Input type="date" value={form.nextSessionDate} onChange={event => setForm(prev => ({ ...prev, nextSessionDate: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+              <Input type="date" value={form.nextSessionDate} onChange={event => setForm(prev => ({ ...prev, nextSessionDate: event.target.value }))} className="h-11 rounded-2xl" />
             </div>
             <div className="space-y-2">
               <Label>ملف مرفق</Label>
@@ -195,11 +195,11 @@ export default function CaseSessionsPage() {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>نص الحكم / الملاحظات</Label>
-              <Textarea value={form.judgmentText} onChange={event => setForm(prev => ({ ...prev, judgmentText: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+              <Textarea value={form.judgmentText} onChange={event => setForm(prev => ({ ...prev, judgmentText: event.target.value }))} className="min-h-24 rounded-2xl" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>ملاحظات إضافية</Label>
-              <Textarea value={form.notes} onChange={event => setForm(prev => ({ ...prev, notes: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+              <Textarea value={form.notes} onChange={event => setForm(prev => ({ ...prev, notes: event.target.value }))} className="min-h-24 rounded-2xl" />
             </div>
           </div>
         </div>

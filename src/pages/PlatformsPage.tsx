@@ -25,10 +25,18 @@ export default function PlatformsPage() {
   };
 
   return (
+    <div className="relative min-h-screen overflow-hidden bg-[#F8FAFC] px-4 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
     <PlatformLayout
       platformTitle="الأنظمة الداخلية لغرفة المدينة"
       platformSubtitle="اختر النظام الذي ترغب بالدخول إليه"
     >
+       
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[150px]">
+        <svg width="100%" height="150" viewBox="0 0 1440 150" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 h-full w-full">
+          <path fill="#6F8E3D" d="M0,82 C260,50 520,56 760,80 C1000,104 1210,88 1440,50 L1440,150 L0,150 Z" />
+          <path fill="#0B3768" d="M0,100 C280,82 520,88 760,108 C1010,130 1230,112 1440,72 L1440,150 L0,150 Z" />
+        </svg>
+      </div>
       <div className="mx-auto flex min-h-[calc(100vh-10rem)] max-w-6xl flex-col justify-center px-0 py-4">
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {permittedPlatforms.map(platform => (
@@ -46,6 +54,8 @@ export default function PlatformsPage() {
           </div>
         )}
       </div>
+      
     </PlatformLayout>
+    </div>
   );
 }

@@ -66,14 +66,14 @@ export default function LegalDashboardPage() {
         {cards.map(card => {
           const Icon = card.icon;
           return (
-            <Card key={card.key} className="border-slate-200 shadow-sm">
+            <Card key={card.key} className="border-border-subtle shadow-[var(--der3-shadow-card)]">
               <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-500">{card.label}</p>
-                  <p className="text-3xl font-black text-slate-900">{summary[card.key]}</p>
+                  <p className="text-sm font-semibold text-text-muted">{card.label}</p>
+                  <p className="text-3xl font-black text-text-main">{summary[card.key]}</p>
                 </div>
               </CardContent>
             </Card>
@@ -82,47 +82,47 @@ export default function LegalDashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-black text-slate-900">الجلسات القادمة</h2>
-                <p className="text-sm text-slate-500">الجلسات القانونية المجدولة خلال الفترة القادمة.</p>
+                <h2 className="text-lg font-black text-text-main">الجلسات القادمة</h2>
+                <p className="text-sm text-text-muted">الجلسات القانونية المجدولة خلال الفترة القادمة.</p>
               </div>
-              <CalendarDays className="h-5 w-5 text-slate-400" />
+              <CalendarDays className="h-5 w-5 text-text-muted" />
             </div>
             <div className="space-y-3">
               {upcomingCaseSessions.length > 0 ? upcomingCaseSessions.map(session => (
-                <div key={session.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-bold text-slate-900">{session.subject}</p>
-                  <p className="mt-1 text-xs text-slate-500">{session.location}</p>
-                  <p className="mt-1 text-xs text-slate-500">{session.sessionDateTime}</p>
+                <div key={session.id} className="rounded-2xl border border-border-subtle bg-background p-4">
+                  <p className="text-sm font-bold text-text-main">{session.subject}</p>
+                  <p className="mt-1 text-xs text-text-muted">{session.location}</p>
+                  <p className="mt-1 text-xs text-text-muted">{session.sessionDateTime}</p>
                 </div>
               )) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">لا توجد جلسات قادمة</div>
+                <div className="rounded-2xl border border-dashed border-border-subtle bg-background p-4 text-sm text-text-muted">لا توجد جلسات قادمة</div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-black text-slate-900">الاستدعاءات القريبة</h2>
-                <p className="text-sm text-slate-500">أحدث الاستدعاءات المسجلة في النظام التجريبي.</p>
+                <h2 className="text-lg font-black text-text-main">الاستدعاءات القريبة</h2>
+                <p className="text-sm text-text-muted">أحدث الاستدعاءات المسجلة في النظام التجريبي.</p>
               </div>
-              <Bell className="h-5 w-5 text-slate-400" />
+              <Bell className="h-5 w-5 text-text-muted" />
             </div>
             <div className="space-y-3">
               {upcomingSummons.length > 0 ? upcomingSummons.map(item => (
-                <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-bold text-slate-900">{item.subject}</p>
-                  <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                  <p className="mt-1 text-xs text-slate-500">{item.sessionDateTime}</p>
+                <div key={item.id} className="rounded-2xl border border-border-subtle bg-background p-4">
+                  <p className="text-sm font-bold text-text-main">{item.subject}</p>
+                  <p className="mt-1 text-xs text-text-muted">{item.location}</p>
+                  <p className="mt-1 text-xs text-text-muted">{item.sessionDateTime}</p>
                 </div>
               )) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">لا توجد استدعاءات</div>
+                <div className="rounded-2xl border border-dashed border-border-subtle bg-background p-4 text-sm text-text-muted">لا توجد استدعاءات</div>
               )}
             </div>
           </CardContent>
@@ -130,11 +130,11 @@ export default function LegalDashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
             <div>
-              <h2 className="text-lg font-black text-slate-900">التحقيقات الحديثة</h2>
-              <p className="text-sm text-slate-500">ملخص سريع للتحقيقات المفتوحة والمغلقة.</p>
+              <h2 className="text-lg font-black text-text-main">التحقيقات الحديثة</h2>
+              <p className="text-sm text-text-muted">ملخص سريع للتحقيقات المفتوحة والمغلقة.</p>
             </div>
             <LegalDataTable
               rows={investigations}
@@ -150,26 +150,27 @@ export default function LegalDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
             <div>
-              <h2 className="text-lg font-black text-slate-900">سجل العمليات الأخير</h2>
-              <p className="text-sm text-slate-500">أحدث العمليات المسجلة في النظام.</p>
+              <h2 className="text-lg font-black text-text-main">سجل العمليات الأخير</h2>
+              <p className="text-sm text-text-muted">أحدث العمليات المسجلة في النظام.</p>
             </div>
             <div className="space-y-3">
               {auditLogs.slice(0, 5).map(log => (
-                <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-bold text-slate-900">{log.userName}</p>
-                  <p className="mt-1 text-xs text-slate-500">{log.serviceName} - {log.actionType}</p>
-                  <p className="mt-1 text-xs text-slate-500">{log.dateTime}</p>
+                <div key={log.id} className="rounded-2xl border border-border-subtle bg-background p-4">
+                  <p className="text-sm font-bold text-text-main">{log.userName}</p>
+                  <p className="mt-1 text-xs text-text-muted">{log.serviceName} - {log.actionType}</p>
+                  <p className="mt-1 text-xs text-text-muted">{log.dateTime}</p>
                 </div>
               ))}
             </div>
-            <Button variant="outline" className="w-full rounded-2xl border-slate-200">عرض السجل الكامل</Button>
+            <Button variant="outline" className="w-full rounded-2xl border-border-subtle">عرض السجل الكامل</Button>
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+
 

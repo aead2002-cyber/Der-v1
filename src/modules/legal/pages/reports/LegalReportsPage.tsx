@@ -26,24 +26,24 @@ export default function LegalReportsPage() {
       <LegalPageHeader
         title="التقارير القانونية"
         subtitle="واجهات تقارير تجريبية فقط حتى يتم ربط باك اند التقارير لاحقاً."
-        actions={<Button variant="outline" className="rounded-2xl border-slate-200" onClick={() => setFiltersOpen(true)}><Filter className="ms-2 h-4 w-4" />خيارات الفلترة</Button>}
+        actions={<Button variant="outline" className="rounded-2xl border-border-subtle" onClick={() => setFiltersOpen(true)}><Filter className="ms-2 h-4 w-4" />خيارات الفلترة</Button>}
       />
 
-      <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600 shadow-sm">
+      <div className="rounded-3xl border border-dashed border-border-subtle bg-white p-4 text-sm text-text-muted shadow-sm">
         سيتم تفعيل التصدير بعد ربط الباك اند.
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {reports.map(report => (
-          <Card key={report.id} className="border-slate-200 shadow-sm">
+          <Card key={report.id} className="border-border-subtle shadow-[var(--der3-shadow-card)]">
             <CardContent className="space-y-4 p-5">
               <div>
-                <h3 className="text-lg font-black text-slate-900">{report.title}</h3>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{report.description}</p>
+                <h3 className="text-lg font-black text-text-main">{report.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-text-muted">{report.description}</p>
               </div>
               <div className="flex gap-2">
-                <Button disabled className="flex-1 rounded-2xl bg-slate-900 text-white hover:bg-slate-900"><FileDown className="ms-2 h-4 w-4" />PDF</Button>
-                <Button disabled variant="outline" className="flex-1 rounded-2xl border-slate-200"><FileSpreadsheet className="ms-2 h-4 w-4" />Excel</Button>
+                <Button disabled className="flex-1 rounded-2xl bg-primary text-white hover:bg-primary/90"><FileDown className="ms-2 h-4 w-4" />PDF</Button>
+                <Button disabled variant="outline" className="flex-1 rounded-2xl border-border-subtle"><FileSpreadsheet className="ms-2 h-4 w-4" />Excel</Button>
               </div>
             </CardContent>
           </Card>
@@ -51,10 +51,11 @@ export default function LegalReportsPage() {
       </div>
 
       <LegalFormModal open={filtersOpen} title="خيارات الفلترة" onOpenChange={setFiltersOpen} onSubmit={event => { event.preventDefault(); setFiltersOpen(false); }}>
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600">
+        <div className="rounded-2xl border border-dashed border-border-subtle bg-background p-6 text-center text-sm text-text-muted">
           هذه نافذة placeholder لخيارات الفلاتر وستتصل بخدمة التقارير لاحقاً.
         </div>
       </LegalFormModal>
     </div>
   );
 }
+

@@ -108,7 +108,7 @@ export default function LegalDocumentsPage() {
       <LegalPageHeader
         title="الوثائق القانونية"
         subtitle="جميع المستندات المرتبطة بالقضايا والتحقيقات والوثائق العامة في مكان واحد."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة وثيقة</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة وثيقة</Button>}
       />
 
       <LegalDataTable
@@ -126,7 +126,7 @@ export default function LegalDocumentsPage() {
         ]}
         rowActions={item => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -136,27 +136,27 @@ export default function LegalDocumentsPage() {
           <div className="space-y-2">
             <Label>نوع الارتباط</Label>
             <Select value={form.source} onValueChange={value => setForm(prev => ({ ...prev, source: value as LegalDocumentSource, relationId: value === 'GENERAL' ? '' : prev.relationId }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(sourceLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>الفئة</Label>
             <Select value={form.documentCategory} onValueChange={value => setForm(prev => ({ ...prev, documentCategory: value as LegalDocumentCategory }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           {form.source !== 'GENERAL' ? (
             <div className="space-y-2 md:col-span-2">
               <Label>معرّف الارتباط</Label>
-              <Input value={form.relationId} onChange={event => setForm(prev => ({ ...prev, relationId: event.target.value }))} className="h-11 rounded-2xl border-slate-200" placeholder={form.source === 'CASE' ? 'case-1' : 'inv-1'} />
-              <p className="text-xs leading-6 text-slate-500">مؤقتاً: أدخل معرّف القضية أو التحقيق المرتبط.</p>
+              <Input value={form.relationId} onChange={event => setForm(prev => ({ ...prev, relationId: event.target.value }))} className="h-11 rounded-2xl" placeholder={form.source === 'CASE' ? 'case-1' : 'inv-1'} />
+              <p className="text-xs leading-6 text-text-muted">مؤقتاً: أدخل معرّف القضية أو التحقيق المرتبط.</p>
             </div>
           ) : null}
           <div className="space-y-2 md:col-span-2">
             <Label>الوصف</Label>
-            <Textarea value={form.description} onChange={event => setForm(prev => ({ ...prev, description: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.description} onChange={event => setForm(prev => ({ ...prev, description: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>الملف</Label>

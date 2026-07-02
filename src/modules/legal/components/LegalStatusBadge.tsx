@@ -1,12 +1,17 @@
 ﻿import React from 'react';
+import { Badge } from '@/shared/ui/Badge';
 import { cn } from '@/lib/utils';
 
 export function LegalStatusBadge({ status, className }: { status: string; className?: string }) {
   const normalized = status.toLowerCase();
   const tone = normalized.includes('active') || normalized.includes('open') || normalized.includes('مفتوح') || normalized.includes('قائمة') || normalized.includes('نشط')
-    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    ? 'border-success/20 bg-success/10 text-success'
     : normalized.includes('closed') || normalized.includes('مغلق') || normalized.includes('مغلقة') || normalized.includes('inactive')
-      ? 'bg-slate-100 text-slate-700 border-slate-200'
-      : 'bg-sky-50 text-sky-700 border-sky-100';
-  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold', tone, className)}>{status}</span>;
+      ? 'border-border-subtle bg-background text-text-muted'
+      : 'border-primary/15 bg-primary/10 text-primary';
+  return (
+    <Badge variant="outline" className={cn('rounded-full px-3 py-1 text-xs font-bold', tone, className)}>
+      {status}
+    </Badge>
+  );
 }

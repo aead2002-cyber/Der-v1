@@ -1,22 +1,24 @@
-﻿import type { Platform } from '@/shared/types/platform';
+import type { Platform } from '@/shared/types/platform';
+import { der3PlatformConfig } from '@/modules/der3/platform.config';
+import { legalPlatformConfig } from '@/modules/legal/platform.config';
 
 export const PLATFORMS: Platform[] = [
   {
-    code: 'DER3',
-    nameAr: 'درع',
-    nameEn: 'DER3',
-    descriptionAr: 'نظام إدارة الأمن السيبراني والحوكمة والالتزام',
-    route: '/der3',
-    logoUrl: '/der3-logo.png',
-    isActive: true,
+    code: der3PlatformConfig.id,
+    nameAr: der3PlatformConfig.nameAr,
+    nameEn: der3PlatformConfig.nameEn,
+    descriptionAr: der3PlatformConfig.descriptionAr,
+    route: der3PlatformConfig.routePrefix,
+    logoUrl: der3PlatformConfig.logoUrl,
+    isActive: der3PlatformConfig.enabled,
   },
   {
-    code: 'LEGAL',
-    nameAr: 'القانونية',
-    nameEn: 'Legal',
-    descriptionAr: 'نظام إدارة القضايا والتحقيقات والعقود والوثائق القانونية',
-    route: '/legal',
-    isActive: true,
+    code: legalPlatformConfig.id,
+    nameAr: legalPlatformConfig.nameAr,
+    nameEn: legalPlatformConfig.nameEn,
+    descriptionAr: legalPlatformConfig.descriptionAr,
+    route: legalPlatformConfig.routePrefix,
+    isActive: legalPlatformConfig.enabled,
   },
 ];
 

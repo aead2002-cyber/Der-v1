@@ -19,8 +19,8 @@ export default function LegalAuditLogPage() {
         subtitle="سجل مبدئي يوضح ما تم على السجلات القانونية داخل النظام."
       />
 
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-5 text-sm leading-7 text-slate-600">
+      <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
+        <CardContent className="p-5 text-sm leading-7 text-text-muted">
           هذا السجل مؤقت وسيُربط لاحقاً بخدمة التدقيق في الباك اند القانونية.
         </CardContent>
       </Card>
@@ -41,3 +41,4 @@ export default function LegalAuditLogPage() {
     </div>
   );
 }
+

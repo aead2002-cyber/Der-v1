@@ -167,7 +167,7 @@ export default function CasesPage() {
       <LegalPageHeader
         title="القضايا"
         subtitle="سجل القضايا القانونية ومتابعتها بشكل موحد داخل النظام."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة قضية</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة قضية</Button>}
       />
 
       <LegalDataTable
@@ -188,10 +188,10 @@ export default function CasesPage() {
         ]}
         rowActions={item => (
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(item)} disabled={item.status === 'CLOSED'} title={item.status === 'CLOSED' ? 'القضية مغلقة' : 'تعديل'}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(item)} disabled={item.status === 'CLOSED'} title={item.status === 'CLOSED' ? 'لا يمكن الحذف بعد الإغلاق' : 'حذف'}><Trash2 className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setCloseTarget(item); setCloseAt(new Date().toISOString().slice(0, 16)); }} disabled={item.status === 'CLOSED'} title="إغلاق"><XCircle className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setReopenTarget(item)} disabled={item.status === 'ACTIVE'} title="إعادة فتح"><RotateCcw className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(item)} disabled={item.status === 'CLOSED'} title={item.status === 'CLOSED' ? 'القضية مغلقة' : 'تعديل'}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(item)} disabled={item.status === 'CLOSED'} title={item.status === 'CLOSED' ? 'لا يمكن الحذف بعد الإغلاق' : 'حذف'}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => { setCloseTarget(item); setCloseAt(new Date().toISOString().slice(0, 16)); }} disabled={item.status === 'CLOSED'} title="إغلاق"><XCircle className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => setReopenTarget(item)} disabled={item.status === 'ACTIVE'} title="إعادة فتح"><RotateCcw className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -200,20 +200,20 @@ export default function CasesPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>رقم القضية الداخلي</Label>
-            <Input value={form.internalCaseNumber} onChange={event => setForm(prev => ({ ...prev, internalCaseNumber: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.internalCaseNumber} onChange={event => setForm(prev => ({ ...prev, internalCaseNumber: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>رقم القضية الرسمي</Label>
-            <Input value={form.officialCaseNumber} onChange={event => setForm(prev => ({ ...prev, officialCaseNumber: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.officialCaseNumber} onChange={event => setForm(prev => ({ ...prev, officialCaseNumber: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>تاريخ القضية</Label>
-            <Input type="date" value={form.caseDate} onChange={event => setForm(prev => ({ ...prev, caseDate: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="date" value={form.caseDate} onChange={event => setForm(prev => ({ ...prev, caseDate: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>الاتجاه</Label>
             <Select value={form.direction} onValueChange={value => setForm(prev => ({ ...prev, direction: value as LegalCaseDirection }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="AGAINST_US">علينا</SelectItem>
                 <SelectItem value="BY_US">لصالحنا</SelectItem>
@@ -223,7 +223,7 @@ export default function CasesPage() {
           <div className="space-y-2">
             <Label>التصنيف</Label>
             <Select value={form.category} onValueChange={value => setForm(prev => ({ ...prev, category: value as LegalCaseCategory }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
               </SelectContent>
@@ -231,34 +231,34 @@ export default function CasesPage() {
           </div>
           <div className="space-y-2">
             <Label>المحكمة</Label>
-            <Input value={form.courtName} onChange={event => setForm(prev => ({ ...prev, courtName: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.courtName} onChange={event => setForm(prev => ({ ...prev, courtName: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>المدعي</Label>
             <Select value={form.plaintiffPartyId} onValueChange={value => setForm(prev => ({ ...prev, plaintiffPartyId: value }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختر الطرف" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختر الطرف" /></SelectTrigger>
               <SelectContent>{parties.map(party => <SelectItem key={party.id} value={party.id}>{party.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>المدعى عليه</Label>
             <Select value={form.defendantPartyId} onValueChange={value => setForm(prev => ({ ...prev, defendantPartyId: value }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختر الطرف" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختر الطرف" /></SelectTrigger>
               <SelectContent>{parties.map(party => <SelectItem key={party.id} value={party.id}>{party.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>المبلغ المطالب به</Label>
-            <Input type="number" value={form.claimAmount} onChange={event => setForm(prev => ({ ...prev, claimAmount: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="number" value={form.claimAmount} onChange={event => setForm(prev => ({ ...prev, claimAmount: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>الموضوع</Label>
-            <Textarea value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>المشرفون</Label>
-            <Input value={form.supervisorUserIds} onChange={event => setForm(prev => ({ ...prev, supervisorUserIds: event.target.value }))} className="h-11 rounded-2xl border-slate-200" placeholder="u-1, u-2" />
-            <p className="text-xs leading-6 text-slate-500">مؤقتاً: اكتب معرّفات المشرفين مفصولة بفاصلة.</p>
+            <Input value={form.supervisorUserIds} onChange={event => setForm(prev => ({ ...prev, supervisorUserIds: event.target.value }))} className="h-11 rounded-2xl" placeholder="u-1, u-2" />
+            <p className="text-xs leading-6 text-text-muted">مؤقتاً: اكتب معرّفات المشرفين مفصولة بفاصلة.</p>
           </div>
         </div>
       </LegalFormModal>
@@ -267,18 +267,18 @@ export default function CasesPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>تاريخ الإغلاق</Label>
-            <Input type="datetime-local" value={closeAt} onChange={event => setCloseAt(event.target.value)} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="datetime-local" value={closeAt} onChange={event => setCloseAt(event.target.value)} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>سبب الإغلاق</Label>
             <Select value={closeReason} onValueChange={value => setCloseReason(value as LegalCaseClosureReason)}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(closureLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>ملاحظات الإغلاق</Label>
-            <Textarea value={closeNotes} onChange={event => setCloseNotes(event.target.value)} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={closeNotes} onChange={event => setCloseNotes(event.target.value)} className="min-h-24 rounded-2xl" />
           </div>
         </div>
       </LegalFormModal>
@@ -286,8 +286,8 @@ export default function CasesPage() {
       <LegalFormModal open={Boolean(reopenTarget)} title="إعادة فتح القضية" onOpenChange={() => setReopenTarget(null)} onSubmit={event => { event.preventDefault(); void confirmReopen(); }}>
         <div className="space-y-2">
           <Label>سبب إعادة الفتح</Label>
-          <Textarea value={reopenReason} onChange={event => setReopenReason(event.target.value)} className="min-h-28 rounded-2xl border-slate-200" />
-          <p className="text-xs leading-6 text-slate-500">سيتم استخدام معرّف المستخدم الحالي مؤقتاً إلى حين ربطه بالباك اند.</p>
+          <Textarea value={reopenReason} onChange={event => setReopenReason(event.target.value)} className="min-h-28 rounded-2xl" />
+          <p className="text-xs leading-6 text-text-muted">سيتم استخدام معرّف المستخدم الحالي مؤقتاً إلى حين ربطه بالباك اند.</p>
         </div>
       </LegalFormModal>
 

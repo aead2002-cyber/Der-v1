@@ -2,11 +2,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { ProtectedRoute } from '@/shared/guards/ProtectedRoute';
-import LoginPage from '@/components/LoginPage';
-import ResetPasswordPage from '@/components/ResetPasswordPage';
-import PublicReportPage from '@/components/PublicReportPage';
-import UnauthorizedPage from '@/components/UnauthorizedPage';
-import NotFoundPage from '@/components/NotFoundPage';
+import LoginPage from '@/pages/LoginPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import PublicReportPage from '@/pages/PublicReportPage';
+import UnauthorizedPage from '@/pages/UnauthorizedPage';
+import NotFoundPage from '@/pages/NotFoundPage';
 import PlatformsPage from '@/pages/PlatformsPage';
 import { Der3Routes } from '@/modules/der3/routes';
 import { LegalRoutes } from '@/modules/legal/routes';

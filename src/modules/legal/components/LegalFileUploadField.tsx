@@ -35,9 +35,10 @@ export function LegalFileUploadField({ value, onChange }: { value?: File | null;
 
   return (
     <div className="space-y-2">
-      <Input type="file" accept=".pdf,.gif,application/pdf,image/gif" onChange={handleChange} />
-      {selectedName ? <p className="text-xs text-slate-500">{selectedName}</p> : null}
-      {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
+      <Input type="file" accept=".pdf,.gif,application/pdf,image/gif" onChange={handleChange} className="h-11 rounded-2xl border-border-subtle bg-card text-text-main" />
+      {selectedName ? <p className="text-xs text-text-muted">{selectedName}</p> : null}
+      {error ? <p className="text-xs font-semibold text-danger">{error}</p> : null}
     </div>
   );
 }
+

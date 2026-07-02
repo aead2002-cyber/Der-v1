@@ -1,0 +1,73 @@
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* DER3 brand palette extracted from the current UI */
+  --color-brand-navy: #1f3a5f;
+  --color-brand-navy-dark: #16294a;
+  --color-brand-navy-light: #2c5485;
+  --color-brand-green: #8ba368;
+  --color-brand-green-dark: #6b8a4a;
+  --color-brand-green-light: #a8bf86;
+
+  /* Semantic tokens matching the current DER3 appearance */
+  --color-background: #f5f7fa;
+  --color-sidebar: #16294a;
+  --color-sidebar-foreground: #aab7d0;
+  --color-sidebar-active: #ffffff;
+  --color-primary: #1f3a5f;
+  --color-accent-brand: #8ba368;
+  --color-text-main: #1f2a44;
+  --color-text-muted: #64748b;
+  --color-border-subtle: #e2e8f0;
+  --color-success: #10b981;
+  --color-success-background: #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-warning: #f59e0b;
+  --color-warning-background: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-danger: #ef4444;
+  --color-danger-background: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-input-error: #dc2626;
+  --color-muted-hover: #f8fafc;
+  --color-card: #ffffff;
+
+  /* Layout and component metrics preserved from the current shell */
+  --der3-sidebar-width: 300px;
+  --der3-header-height: 64px;
+  --der3-radius-card: 12px;
+  --der3-radius-dialog: 18px;
+  --der3-radius-input: 14px;
+  --der3-shadow-card: 0 22px 55px rgba(11, 55, 104, 0.12);
+  --der3-shadow-button: 0 8px 20px rgba(11, 55, 104, 0.20);
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  --animate-spin-slow: spin-slow 8s linear infinite;
+}
+
+:root {
+  --der3-page-background: #f5f7fa;
+  --der3-card-background: #ffffff;
+  --der3-text-main: #1f2a44;
+  --der3-text-muted: #64748b;
+  --der3-border: #e2e8f0;
+  --der3-status-success: #10b981;
+  --der3-status-warning: #f59e0b;
+  --der3-status-danger: #ef4444;
+  --der3-danger-background: #fef2f2;
+  --der3-danger-border: #fecaca;
+  --der3-warning-background: #fffbeb;
+  --der3-warning-border: #fde68a;
+  --der3-success-background: #ecfdf5;
+  --der3-success-border: #a7f3d0;
+  --der3-muted-hover: #f8fafc;
+  --der3-input-error: #dc2626;
+}

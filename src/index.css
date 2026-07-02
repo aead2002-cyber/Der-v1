@@ -1,38 +1,8 @@
 @import "tailwindcss";
-
-@theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-  /* Brand palette derived from DER3 logo */
-  --color-brand-navy: #1f3a5f;
-  --color-brand-navy-dark: #16294a;
-  --color-brand-navy-light: #2c5485;
-  --color-brand-green: #8ba368;
-  --color-brand-green-dark: #6b8a4a;
-  --color-brand-green-light: #a8bf86;
-
-  --color-background: #f5f7fa;
-  --color-sidebar: #16294a;
-  --color-sidebar-foreground: #aab7d0;
-  --color-sidebar-active: #ffffff;
-  --color-primary: #1f3a5f;
-  --color-accent-brand: #8ba368;
-  --color-text-main: #1f2a44;
-  --color-text-muted: #64748b;
-  --color-border-subtle: #e2e8f0;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-card: #ffffff;
-
-  --radius-xl: 12px;
-
-  @keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  --animate-spin-slow: spin-slow 8s linear infinite;
-}
+@import "./shared/theme/tokens.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
 
 @layer base {
   body {
@@ -87,9 +57,6 @@
     scrollbar-width: none;
   }
 }
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 

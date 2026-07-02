@@ -121,7 +121,7 @@ export default function InvestigationSessionsPage() {
       <LegalPageHeader
         title="جلسات التحقيق"
         subtitle="جلسات الاستماع والتحقيق الداخلي ومحاضر الأقوال ذات الصلة."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة جلسة تحقيق</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة جلسة تحقيق</Button>}
       />
 
       <LegalDataTable
@@ -137,8 +137,8 @@ export default function InvestigationSessionsPage() {
         ]}
         rowActions={item => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -148,14 +148,14 @@ export default function InvestigationSessionsPage() {
           <div className="space-y-2">
             <Label>التحقيق</Label>
             <Select value={form.investigationId} onValueChange={value => setForm(prev => ({ ...prev, investigationId: value }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختر التحقيق" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختر التحقيق" /></SelectTrigger>
               <SelectContent>{investigations.map(item => <SelectItem key={item.id} value={item.id}>{item.investigationNumber}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>الاستدعاء المرتبط</Label>
             <Select value={form.summonsId} onValueChange={value => setForm(prev => ({ ...prev, summonsId: value === "__none__" ? "" : value }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختياري" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختياري" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">بدون استدعاء</SelectItem>
                 {summons.map(item => <SelectItem key={item.id} value={item.id}>{item.id}</SelectItem>)}
@@ -164,15 +164,15 @@ export default function InvestigationSessionsPage() {
           </div>
           <div className="space-y-2">
             <Label>تاريخ ووقت الجلسة</Label>
-            <Input type="datetime-local" value={form.sessionDateTime} onChange={event => setForm(prev => ({ ...prev, sessionDateTime: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="datetime-local" value={form.sessionDateTime} onChange={event => setForm(prev => ({ ...prev, sessionDateTime: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>مكان الجلسة</Label>
-            <Input value={form.location} onChange={event => setForm(prev => ({ ...prev, location: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.location} onChange={event => setForm(prev => ({ ...prev, location: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>موضوع الجلسة</Label>
-            <Input value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="md:col-span-2">
             <LegalMultiSelectField
@@ -185,7 +185,7 @@ export default function InvestigationSessionsPage() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>نص الإفادة</Label>
-            <Textarea value={form.statementText} onChange={event => setForm(prev => ({ ...prev, statementText: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.statementText} onChange={event => setForm(prev => ({ ...prev, statementText: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>ملف مرفق</Label>
@@ -193,7 +193,7 @@ export default function InvestigationSessionsPage() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>ملاحظات المحقق</Label>
-            <Textarea value={form.investigatorNotes} onChange={event => setForm(prev => ({ ...prev, investigatorNotes: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.investigatorNotes} onChange={event => setForm(prev => ({ ...prev, investigatorNotes: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
         </div>
       </LegalFormModal>

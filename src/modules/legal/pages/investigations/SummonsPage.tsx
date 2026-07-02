@@ -118,10 +118,10 @@ export default function SummonsPage() {
       <LegalPageHeader
         title="الاستدعاءات"
         subtitle="الاستدعاءات القانونية المرسلة للموظفين ومواعيد الجلسات الخاصة بها."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إنشاء استدعاء</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إنشاء استدعاء</Button>}
       />
 
-      <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600 shadow-sm">
+      <div className="rounded-3xl border border-dashed border-border-subtle bg-card p-4 text-sm text-text-muted shadow-[var(--der3-shadow-card)]">
         سيتم إرسال بريد الاستدعاء بعد ربط باك اند القانونية.
       </div>
 
@@ -138,8 +138,8 @@ export default function SummonsPage() {
         ]}
         rowActions={item => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -149,39 +149,39 @@ export default function SummonsPage() {
           <div className="space-y-2">
             <Label>التحقيق</Label>
             <Select value={form.investigationId} onValueChange={value => setForm(prev => ({ ...prev, investigationId: value }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختر التحقيق" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختر التحقيق" /></SelectTrigger>
               <SelectContent>{investigations.map(item => <SelectItem key={item.id} value={item.id}>{item.investigationNumber}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>الموظف المستدعى</Label>
             <Select value={form.employeeId} onValueChange={value => setForm(prev => ({ ...prev, employeeId: value }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
               <SelectContent>{employees.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>تاريخ ووقت جلسة التحقيق</Label>
-            <Input type="datetime-local" value={form.sessionDateTime} onChange={event => setForm(prev => ({ ...prev, sessionDateTime: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="datetime-local" value={form.sessionDateTime} onChange={event => setForm(prev => ({ ...prev, sessionDateTime: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>حالة الاستدعاء</Label>
             <Select value={form.status} onValueChange={value => setForm(prev => ({ ...prev, status: value as LegalSummonsStatus }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(statusLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>مكان التحقيق</Label>
-            <Input value={form.location} onChange={event => setForm(prev => ({ ...prev, location: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.location} onChange={event => setForm(prev => ({ ...prev, location: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>موضوع التحقيق</Label>
-            <Textarea value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>ملاحظات</Label>
-            <Textarea value={form.notes} onChange={event => setForm(prev => ({ ...prev, notes: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.notes} onChange={event => setForm(prev => ({ ...prev, notes: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
         </div>
       </LegalFormModal>

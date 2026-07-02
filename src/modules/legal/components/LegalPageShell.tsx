@@ -1,5 +1,7 @@
 ﻿import React from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/Button';
+import { Card } from '@/shared/ui/Card';
+import { PageHeader } from '@/shared/ui/PageHeader';
 
 interface LegalPageShellProps {
   title: string;
@@ -11,17 +13,16 @@ interface LegalPageShellProps {
 export function LegalPageShell({ title, description, actionLabel, children }: LegalPageShellProps) {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">{title}</h1>
-          <p className="max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
-        </div>
-        {actionLabel ? (
-          <Button disabled className="rounded-full bg-slate-900 px-5 text-white hover:bg-slate-900">
-            {actionLabel}
-          </Button>
-        ) : null}
-      </div>
+      <Card className="rounded-3xl border-border-subtle shadow-[var(--der3-shadow-card)]">
+        <PageHeader
+          title={title}
+          description={description}
+          actions={actionLabel ? <Button disabled className="rounded-full px-5">{actionLabel}</Button> : undefined}
+          className="items-start gap-4 p-6 lg:items-end"
+          titleClassName="text-3xl font-black tracking-tight text-text-main"
+          descriptionClassName="max-w-3xl text-sm leading-7 text-text-muted"
+        />
+      </Card>
       {children}
     </div>
   );

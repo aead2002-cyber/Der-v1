@@ -1,0 +1,50 @@
+export const der3ThemeTokens = {
+  colors: {
+    primary: '#1f3a5f',
+    primaryDark: '#16294a',
+    primaryLight: '#2c5485',
+    accent: '#8ba368',
+    accentDark: '#6b8a4a',
+    accentLight: '#a8bf86',
+    background: '#f5f7fa',
+    sidebar: '#16294a',
+    sidebarForeground: '#aab7d0',
+    sidebarActive: '#ffffff',
+    text: '#1f2a44',
+    mutedText: '#64748b',
+    border: '#e2e8f0',
+    card: '#ffffff',
+    success: '#10b981',
+    successBackground: '#ecfdf5',
+    successBorder: '#a7f3d0',
+    warning: '#f59e0b',
+    warningBackground: '#fffbeb',
+    warningBorder: '#fde68a',
+    danger: '#ef4444',
+    dangerBackground: '#fef2f2',
+    dangerBorder: '#fecaca',
+    inputError: '#dc2626',
+    mutedHover: '#f8fafc',
+  },
+  layout: {
+    sidebarWidth: 300,
+    headerHeight: 64,
+  },
+  radius: {
+    card: 12,
+    dialog: 18,
+    input: 14,
+  },
+  shadow: {
+    card: '0 22px 55px rgba(11, 55, 104, 0.12)',
+    button: '0 8px 20px rgba(11, 55, 104, 0.20)',
+  },
+  componentNotes: {
+    table: 'Flat white table container with subtle border and light header row.',
+    button: 'Rounded primary buttons with navy fill and soft shadow.',
+    formField: 'Rounded input with thin border, white background, and navy focus ring.',
+    badge: 'Small rounded badges with soft tint backgrounds and bold text.',
+  },
+} as const;
+
+export type Der3ThemeTokens = typeof der3ThemeTokens;

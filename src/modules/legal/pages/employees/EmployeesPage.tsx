@@ -106,7 +106,7 @@ export default function EmployeesPage() {
       <LegalPageHeader
         title="الموظفون"
         subtitle="إدارة الموظفين المشاركين في التحقيقات والاستدعاءات القانونية."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة موظف</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة موظف</Button>}
       />
 
       <LegalDataTable
@@ -123,8 +123,8 @@ export default function EmployeesPage() {
         ]}
         rowActions={item => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -133,32 +133,32 @@ export default function EmployeesPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>اسم الموظف</Label>
-            <Input value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>الرقم الوظيفي</Label>
-            <Input value={form.employeeNumber} onChange={event => setForm(prev => ({ ...prev, employeeNumber: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.employeeNumber} onChange={event => setForm(prev => ({ ...prev, employeeNumber: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>القسم</Label>
-            <Input value={form.department} onChange={event => setForm(prev => ({ ...prev, department: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.department} onChange={event => setForm(prev => ({ ...prev, department: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>المسمى الوظيفي</Label>
-            <Input value={form.jobTitle} onChange={event => setForm(prev => ({ ...prev, jobTitle: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.jobTitle} onChange={event => setForm(prev => ({ ...prev, jobTitle: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>البريد الإلكتروني</Label>
-            <Input type="email" value={form.email} onChange={event => setForm(prev => ({ ...prev, email: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="email" value={form.email} onChange={event => setForm(prev => ({ ...prev, email: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>الجوال</Label>
-            <Input value={form.mobile} onChange={event => setForm(prev => ({ ...prev, mobile: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.mobile} onChange={event => setForm(prev => ({ ...prev, mobile: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>الحالة</Label>
             <Select value={form.status} onValueChange={value => setForm(prev => ({ ...prev, status: value as LegalEmployeeStatus }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ACTIVE">نشط</SelectItem>
                 <SelectItem value="INACTIVE">غير نشط</SelectItem>

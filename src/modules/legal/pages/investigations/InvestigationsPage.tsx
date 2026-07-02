@@ -130,7 +130,7 @@ export default function InvestigationsPage() {
       <LegalPageHeader
         title="التحقيقات"
         subtitle="ملفات التحقيق الداخلي ومتابعة الموظفين والمخرجات النهائية."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة تحقيق</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة تحقيق</Button>}
       />
 
       <LegalDataTable
@@ -145,9 +145,9 @@ export default function InvestigationsPage() {
         ]}
         rowActions={item => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(item)} disabled={item.status === 'CLOSED'}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => { setCloseTarget(item); setCloseAt(new Date().toISOString().slice(0, 16)); }} disabled={item.status === 'CLOSED'}><XCircle className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(item)} disabled={item.status === 'CLOSED'}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => { setCloseTarget(item); setCloseAt(new Date().toISOString().slice(0, 16)); }} disabled={item.status === 'CLOSED'}><XCircle className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(item)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -156,15 +156,15 @@ export default function InvestigationsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>رقم التحقيق</Label>
-            <Input value={form.investigationNumber} onChange={event => setForm(prev => ({ ...prev, investigationNumber: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.investigationNumber} onChange={event => setForm(prev => ({ ...prev, investigationNumber: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>تاريخ التحقيق</Label>
-            <Input type="date" value={form.investigationDate} onChange={event => setForm(prev => ({ ...prev, investigationDate: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="date" value={form.investigationDate} onChange={event => setForm(prev => ({ ...prev, investigationDate: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>موضوع التحقيق</Label>
-            <Textarea value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={form.subject} onChange={event => setForm(prev => ({ ...prev, subject: event.target.value }))} className="min-h-24 rounded-2xl" />
           </div>
           <div className="md:col-span-2">
             <LegalMultiSelectField
@@ -182,26 +182,26 @@ export default function InvestigationsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>تاريخ الإغلاق</Label>
-            <Input type="datetime-local" value={closeAt} onChange={event => setCloseAt(event.target.value)} className="h-11 rounded-2xl border-slate-200" />
+            <Input type="datetime-local" value={closeAt} onChange={event => setCloseAt(event.target.value)} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>النتيجة</Label>
             <Select value={closeResult} onValueChange={value => setCloseResult(value as LegalInvestigationResult)}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(resultLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>القرار النهائي</Label>
-            <Textarea value={finalDecision} onChange={event => setFinalDecision(event.target.value)} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={finalDecision} onChange={event => setFinalDecision(event.target.value)} className="min-h-24 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>التوصيات النهائية</Label>
-            <Textarea value={finalRecommendations} onChange={event => setFinalRecommendations(event.target.value)} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={finalRecommendations} onChange={event => setFinalRecommendations(event.target.value)} className="min-h-24 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>ملاحظات الإغلاق</Label>
-            <Textarea value={closureNotes} onChange={event => setClosureNotes(event.target.value)} className="min-h-24 rounded-2xl border-slate-200" />
+            <Textarea value={closureNotes} onChange={event => setClosureNotes(event.target.value)} className="min-h-24 rounded-2xl" />
           </div>
         </div>
       </LegalFormModal>

@@ -45,20 +45,20 @@ export default function LegalSettingsPage() {
       <LegalPageHeader
         title="الإعدادات القانونية"
         subtitle="إعدادات قانونية تجريبية ستنتقل لاحقاً إلى الباك اند."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={() => void handleSave()} disabled={!settings || saving}>{saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}</Button>}
+        actions={<Button className="rounded-2xl bg-primary px-5 text-white hover:bg-primary" onClick={() => void handleSave()} disabled={!settings || saving}>{saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}</Button>}
       />
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
-            <h2 className="text-lg font-black text-slate-900">إعدادات التذكير</h2>
+            <h2 className="text-lg font-black text-text-main">إعدادات التذكير</h2>
             <div className="space-y-2">
               <Label>مدة التذكير قبل الجلسة</Label>
               <Select
                 value={String(settings?.caseReminderHours ?? 24)}
                 onValueChange={value => setSettings(prev => prev ? { ...prev, caseReminderHours: Number(value) } : prev)}
               >
-                <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                <SelectTrigger className="h-11 rounded-2xl border-border-subtle bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -73,7 +73,7 @@ export default function LegalSettingsPage() {
                   min={1}
                   value={customReminder}
                   onChange={event => setCustomReminder(event.target.value)}
-                  className="h-11 rounded-2xl border-slate-200"
+                  className="h-11 rounded-2xl border-border-subtle"
                   placeholder="أدخل الساعات"
                 />
               ) : null}
@@ -81,50 +81,50 @@ export default function LegalSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
-            <h2 className="text-lg font-black text-slate-900">إعدادات الملفات</h2>
+            <h2 className="text-lg font-black text-text-main">إعدادات الملفات</h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-500">أنواع الملفات المسموحة</p>
-                <p className="mt-2 text-lg font-black text-slate-900">{allowedFiles}</p>
+              <div className="rounded-2xl border border-border-subtle bg-background p-4">
+                <p className="text-sm font-semibold text-text-muted">أنواع الملفات المسموحة</p>
+                <p className="mt-2 text-lg font-black text-text-main">{allowedFiles}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-500">الحد الأقصى لحجم الملف</p>
-                <p className="mt-2 text-lg font-black text-slate-900">{settings?.maxFileSizeMb ?? 2} MB</p>
+              <div className="rounded-2xl border border-border-subtle bg-background p-4">
+                <p className="text-sm font-semibold text-text-muted">الحد الأقصى لحجم الملف</p>
+                <p className="mt-2 text-lg font-black text-text-main">{settings?.maxFileSizeMb ?? 2} MB</p>
               </div>
             </div>
-            <p className="text-sm leading-7 text-slate-500">الرفع التجريبي يقبل حالياً ملفات PDF و GIF فقط بحد أقصى 2MB.</p>
+            <p className="text-sm leading-7 text-text-muted">الرفع التجريبي يقبل حالياً ملفات PDF و GIF فقط بحد أقصى 2MB.</p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-4 p-5">
-            <h2 className="text-lg font-black text-slate-900">إعدادات الإشعارات</h2>
+            <h2 className="text-lg font-black text-text-main">إعدادات الإشعارات</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => setSettings(prev => prev ? { ...prev, enableInternalNotifications: !prev.enableInternalNotifications } : prev)} className={`rounded-2xl border px-4 py-3 text-right ${settings?.enableInternalNotifications ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+              <button type="button" onClick={() => setSettings(prev => prev ? { ...prev, enableInternalNotifications: !prev.enableInternalNotifications } : prev)} className={`rounded-2xl border px-4 py-3 text-right ${settings?.enableInternalNotifications ? 'border-slate-900 bg-primary text-white' : 'border-border-subtle bg-card text-slate-700'}`}>
                 <p className="text-sm font-bold">الإشعارات الداخلية</p>
-                <p className={`mt-1 text-xs ${settings?.enableInternalNotifications ? 'text-slate-200' : 'text-slate-500'}`}>تفعيل الإشعارات داخل النظام</p>
+                <p className={`mt-1 text-xs ${settings?.enableInternalNotifications ? 'text-slate-200' : 'text-text-muted'}`}>تفعيل الإشعارات داخل النظام</p>
               </button>
-              <button type="button" onClick={() => setSettings(prev => prev ? { ...prev, enableEmailNotifications: !prev.enableEmailNotifications } : prev)} className={`rounded-2xl border px-4 py-3 text-right ${settings?.enableEmailNotifications ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+              <button type="button" onClick={() => setSettings(prev => prev ? { ...prev, enableEmailNotifications: !prev.enableEmailNotifications } : prev)} className={`rounded-2xl border px-4 py-3 text-right ${settings?.enableEmailNotifications ? 'border-slate-900 bg-primary text-white' : 'border-border-subtle bg-card text-slate-700'}`}>
                 <p className="text-sm font-bold">إشعارات البريد</p>
-                <p className={`mt-1 text-xs ${settings?.enableEmailNotifications ? 'text-slate-200' : 'text-slate-500'}`}>تفعيل الرسائل البريدية</p>
+                <p className={`mt-1 text-xs ${settings?.enableEmailNotifications ? 'text-slate-200' : 'text-text-muted'}`}>تفعيل الرسائل البريدية</p>
               </button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border-subtle shadow-[var(--der3-shadow-card)]">
           <CardContent className="space-y-3 p-5">
-            <h2 className="text-lg font-black text-slate-900">قوائم النظام placeholder</h2>
-            <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-3">تصنيفات القضايا</div>
-              <div className="rounded-2xl bg-slate-50 p-3">نتائج الجلسات</div>
-              <div className="rounded-2xl bg-slate-50 p-3">أسباب إغلاق القضية</div>
-              <div className="rounded-2xl bg-slate-50 p-3">نتائج التحقيق</div>
-              <div className="rounded-2xl bg-slate-50 p-3">أدوار الحضور</div>
+            <h2 className="text-lg font-black text-text-main">قوائم النظام placeholder</h2>
+            <div className="grid gap-2 text-sm text-text-muted sm:grid-cols-2">
+              <div className="rounded-2xl bg-background p-3">تصنيفات القضايا</div>
+              <div className="rounded-2xl bg-background p-3">نتائج الجلسات</div>
+              <div className="rounded-2xl bg-background p-3">أسباب إغلاق القضية</div>
+              <div className="rounded-2xl bg-background p-3">نتائج التحقيق</div>
+              <div className="rounded-2xl bg-background p-3">أدوار الحضور</div>
             </div>
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-background p-4 text-sm text-text-muted">
               الصلاحيات وإعادة الفتح حالياً placeholders فقط.
             </div>
           </CardContent>
@@ -133,4 +133,5 @@ export default function LegalSettingsPage() {
     </div>
   );
 }
+
 

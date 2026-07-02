@@ -26,7 +26,8 @@ builder.Services.AddCors(options =>
                 "https://localhost:3000",
                 "https://localhost:5173",
                 "http://172.16.10.19:3000",
-                "http://172.16.10.19", "http://myportal.mcci.org.sa")
+                "http://172.16.10.19", "https://myportal.mcci.org.sa"
+                , "http://myportal.mcci.org.sa")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from '@/components/ui/sonner';
-import PublicReportPage from './components/PublicReportPage';
+import PublicReportPage from './pages/PublicReportPage';
 import './index.css';
 import './i18n';
 

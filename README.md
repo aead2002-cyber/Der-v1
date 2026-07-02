@@ -1,4 +1,4 @@
-<div align="center">
+<!-- <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
@@ -15,4 +15,40 @@ The ASP.NET Core backend lives under [`backend/`](backend).
 3. Start the frontend:
    `npm run dev`
 
-For backend execution and deployment settings, use the project under [`backend/DER3.Api`](backend/DER3.Api).
+For backend execution and deployment settings, use the project under [`backend/DER3.Api`](backend/DER3.Api). -->
+<!-- src/
+├── app/
+│   ├── App.tsx
+│   └── routes.tsx
+│
+├── shared/
+│   ├── ui/
+│   ├── layout/
+│   ├── theme/
+│   ├── guards/
+│   ├── auth/
+│   ├── config/
+│   └── utils/
+│
+├── modules/
+│   ├── der3/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── routes.tsx
+│   │   └── platform.config.ts
+│   │
+│   └── legal/
+│       ├── pages/
+│       ├── components/
+│       ├── services/
+│       ├── routes.tsx
+│       └── platform.config.ts
+│
+├── services/
+│   └── temporary-existing-services
+│
+└── pages/
+    ├── PlatformsPage.tsx
+    ├── UnauthorizedPage.tsx
+    └── NotFoundPage.tsx -->

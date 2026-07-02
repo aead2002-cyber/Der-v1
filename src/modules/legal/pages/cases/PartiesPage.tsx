@@ -104,7 +104,7 @@ export default function PartiesPage() {
       <LegalPageHeader
         title="الأطراف والجهات"
         subtitle="إدارة الأطراف المرتبطة بالقضايا القانونية كالأشخاص والشركات والجهات الرسمية."
-        actions={<Button className="rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-900" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة طرف</Button>}
+        actions={<Button className="rounded-2xl px-5" onClick={openCreate}><Plus className="ms-2 h-4 w-4" />إضافة طرف</Button>}
       />
 
       <LegalDataTable
@@ -119,8 +119,8 @@ export default function PartiesPage() {
         ]}
         rowActions={party => (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-slate-200" onClick={() => openEdit(party)}><Pencil className="h-4 w-4" /></Button>
-            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteTarget(party)}><Trash2 className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl" onClick={() => openEdit(party)}><Pencil className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-2xl text-danger" onClick={() => setDeleteTarget(party)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         )}
       />
@@ -129,12 +129,12 @@ export default function PartiesPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label>اسم الطرف</Label>
-            <Input value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2">
             <Label>نوع الطرف</Label>
             <Select value={form.partyType} onValueChange={value => setForm(prev => ({ ...prev, partyType: value as LegalPartyType }))}>
-              <SelectTrigger className="h-11 rounded-2xl border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-2xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(partyTypeLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
               </SelectContent>
@@ -142,15 +142,15 @@ export default function PartiesPage() {
           </div>
           <div className="space-y-2">
             <Label>رقم الهوية أو السجل</Label>
-            <Input value={form.identityNumber} onChange={event => setForm(prev => ({ ...prev, identityNumber: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.identityNumber} onChange={event => setForm(prev => ({ ...prev, identityNumber: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>بيانات التواصل</Label>
-            <Input value={form.contactInfo} onChange={event => setForm(prev => ({ ...prev, contactInfo: event.target.value }))} className="h-11 rounded-2xl border-slate-200" />
+            <Input value={form.contactInfo} onChange={event => setForm(prev => ({ ...prev, contactInfo: event.target.value }))} className="h-11 rounded-2xl" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>ملاحظات</Label>
-            <Textarea value={form.notes} onChange={event => setForm(prev => ({ ...prev, notes: event.target.value }))} className="min-h-28 rounded-2xl border-slate-200" />
+            <Textarea value={form.notes} onChange={event => setForm(prev => ({ ...prev, notes: event.target.value }))} className="min-h-28 rounded-2xl" />
           </div>
         </div>
       </LegalFormModal>

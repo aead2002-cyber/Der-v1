@@ -1,5 +1,5 @@
 import { Notification } from '@/types';
-import { notificationsApi } from '@/services/notificationsApi';
+import { notificationsApi } from '@/modules/der3/services/notificationsApi';
 
 export type NotificationDispatchInput = Omit<Notification, 'id' | 'createdAt' | 'isRead'>;
 

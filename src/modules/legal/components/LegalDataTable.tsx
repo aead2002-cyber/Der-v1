@@ -1,8 +1,8 @@
 ﻿import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/Button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
@@ -103,36 +103,36 @@ export function LegalDataTable<T>({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-3xl border border-border-subtle bg-card p-4 shadow-[var(--der3-shadow-card)] lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative max-w-md flex-1">
-            <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
             <Input
               value={search}
               onChange={event => setSearch(event.target.value)}
               placeholder={searchPlaceholder}
-              className="h-11 rounded-2xl border-slate-200 bg-slate-50 pe-10"
+              className="h-11 rounded-2xl border-border-subtle bg-background pe-10"
             />
           </div>
           {filters ? <div className="flex flex-wrap gap-2">{filters}</div> : null}
         </div>
-        <div className="text-sm font-semibold text-slate-500">
+        <div className="text-sm font-semibold text-text-muted">
           {sortedRows.length === 0 ? '0' : `${(safePage - 1) * pageSize + 1}-${Math.min(safePage * pageSize, sortedRows.length)}`} / {sortedRows.length}
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-border-subtle bg-card shadow-[var(--der3-shadow-card)]">
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader className="bg-background">
             <TableRow className="hover:bg-transparent">
               {columns.map(column => {
                 const active = sortKey === column.key;
                 const Icon = active ? (sortDirection === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
                 return (
-                  <TableHead key={column.key} className={cn('h-14 whitespace-nowrap px-4 text-right font-bold text-slate-600', column.className, column.align === 'center' && 'text-center', column.align === 'left' && 'text-left')}>
+                  <TableHead key={column.key} className={cn('h-14 whitespace-nowrap px-4 text-right font-bold text-text-muted', column.className, column.align === 'center' && 'text-center', column.align === 'left' && 'text-left')}>
                     <button
                       type="button"
-                      className={cn('inline-flex items-center gap-2', column.sortable && 'cursor-pointer hover:text-slate-900')}
+                      className={cn('inline-flex items-center gap-2', column.sortable && 'cursor-pointer hover:text-text-main')}
                       onClick={() => toggleSort(column)}
                     >
                       <span>{column.label}</span>
@@ -141,15 +141,15 @@ export function LegalDataTable<T>({
                   </TableHead>
                 );
               })}
-              {rowActions ? <TableHead className="w-40 px-4 text-right font-bold text-slate-600">الإجراءات</TableHead> : null}
+              {rowActions ? <TableHead className="w-40 px-4 text-right font-bold text-text-muted">الإجراءات</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {hasRows ? (
               pageRows.map((row, index) => (
-                <TableRow key={index} className="hover:bg-slate-50/60">
+                <TableRow key={index} className="hover:bg-background/70">
                   {columns.map(column => (
-                    <TableCell key={column.key} className={cn('px-4 py-4 align-top text-slate-700', column.className, column.align === 'center' && 'text-center', column.align === 'left' && 'text-left')}>
+                    <TableCell key={column.key} className={cn('px-4 py-4 align-top text-text-main', column.className, column.align === 'center' && 'text-center', column.align === 'left' && 'text-left')}>
                       {column.render(row)}
                     </TableCell>
                   ))}
@@ -158,9 +158,9 @@ export function LegalDataTable<T>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length + (rowActions ? 1 : 0)} className="px-6 py-10 text-center text-slate-500">
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8">
-                    <p className="text-base font-bold text-slate-900">{emptyMessage}</p>
+                <TableCell colSpan={columns.length + (rowActions ? 1 : 0)} className="px-6 py-10 text-center text-text-muted">
+                  <div className="rounded-2xl border border-dashed border-border-subtle bg-background p-8">
+                    <p className="text-base font-bold text-text-main">{emptyMessage}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -168,11 +168,11 @@ export function LegalDataTable<T>({
           </TableBody>
         </Table>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3 text-sm text-slate-500">
+        <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3 text-sm text-text-muted">
             <span>عدد الصفوف</span>
             <Select value={String(pageSize)} onValueChange={value => { setPageSize(Number(value)); setPage(1); }}>
-              <SelectTrigger className="h-10 w-24 rounded-2xl border-slate-200 bg-white">
+              <SelectTrigger className="h-10 w-24 rounded-2xl border-border-subtle bg-card">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -184,19 +184,19 @@ export function LegalDataTable<T>({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-slate-200" disabled={safePage <= 1} onClick={() => setPage(1)}>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-border-subtle" disabled={safePage <= 1} onClick={() => setPage(1)}>
               <First className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-slate-200" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-border-subtle" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
               <Prev className="h-4 w-4" />
             </Button>
-            <div className="min-w-28 text-center text-sm font-bold text-slate-700">
+            <div className="min-w-28 text-center text-sm font-bold text-text-main">
               {safePage} / {totalPages}
             </div>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-slate-200" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-border-subtle" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
               <Next className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-slate-200" disabled={safePage >= totalPages} onClick={() => setPage(totalPages)}>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-2xl border-border-subtle" disabled={safePage >= totalPages} onClick={() => setPage(totalPages)}>
               <Last className="h-4 w-4" />
             </Button>
           </div>
